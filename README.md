@@ -1,64 +1,235 @@
-# Scylla OSINT
-
-Scylla is a beginner-friendly terminal OSINT workspace for public-information research and authorized defensive security review.
-
-## Quick start
-
-```bash
-pip install -r requirements.txt
-python main.py
+```text
+   ____                    _ _           ____   _____ _____ _   _ _____
+  / ___|  ___ _   _  ___  | | | __ _    / ___| | ____|_   _| | | | ____|
+  \___ \ / __| | | |/ _ \ | | |/ _` |   \___ \ |  _|   | | | | | |  _|
+   ___) | (__| |_| |  __/ | | | (_| |    ___) || |___  | | | |_| | |___
+  |____/ \___|\__,_|\___| |_|_|\__,_|   |____/ |_____| |_|  \___/|_____|
 ```
 
-The UI flow is:
+# Scylla
 
-1. Select a category.
-2. Select a tool.
-3. Run `help` to see what it does, why it matters, its limits, and its required inputs.
-4. Set the tool's input and run it.
+[![OSINT](https://img.shields.io/badge/Focus-OSINT-4B0082?style=for-the-badge)](https://en.wikipedia.org/wiki/Open-source_intelligence)
+[![Defensive Security](https://img.shields.io/badge/Focus-Defensive%20Security-1F6FEB?style=for-the-badge)](https://www.nist.gov/cyberframework)
+[![Terminal](https://img.shields.io/badge/Interface-Terminal-111111?style=for-the-badge)](https://en.wikipedia.org/wiki/Computer_terminal)
+[![Authorized Research](https://img.shields.io/badge/Use-Authorized%20Research-2EA44F?style=for-the-badge)](https://github.com/vkxd/Scyll)
 
-Example:
+Scylla is a terminal-based OSINT and defensive security research tool. It helps you investigate public information, review websites you own or are authorized to test, and organize findings in one interface.
 
-```text
-Select vulnerability
-Select ddos-assessment
+> Use Scylla as a research and configuration-guidance tool. Results may be incomplete, blocked, uncertain, or require manual verification.
+
+## How the UI Works
+
+Scylla organizes tools into categories:
+
+1. Categories appear in the left sidebar.
+2. Select a category.
+3. The category's tools appear on the right.
+4. Select a tool.
+5. Use the tool-specific CLI.
+6. Run `help` to learn what the tool does.
+
+### Example
+
+~~~text
+Click vulnerability
+Click security-headers
 /help
 set target https://example.com
 run
+~~~
+
+## Main Categories
+
+| Category | Description |
+|---|---|
+| Vulnerability | Ports, DDoS resilience, subdomains, technology stacks, CVEs, headers, cookies, SSL/TLS, secrets, and more. |
+| DNS | DNS records, SPF, DMARC, DNSSEC, reverse DNS, ASN, and certificate clues. |
+| Web Security | Website information, uptime, redirects, and public-page extraction. |
+| Social | Sherlock-style username searches across public platforms. |
+| Email | Email-domain security and header analysis. |
+| IP Intelligence | IP resolution, reverse DNS, and network context. |
+| Cloud | Storage, CDN, origin, and cloud-service reviews. |
+| People | Organization of public profiles and public links. |
+| News | Article research, source comparison, and timelines. |
+| Business | Company profiles, brands, and product research. |
+| Geospatial | Coordinate validation and public place research. |
+| Images | Local metadata, hashes, metadata-cleaning guidance, and OCR planning. |
+| Documents | Local metadata, text extraction, and file inventory. |
+| Monitoring | Uptime, certificate expiry, and exposure comparisons. |
+| Breaches | Breach-source guidance and authorized local password-policy analysis. |
+| Temporary Mail | Disposable mailbox utility. |
+
+## Important Tools
+
+### Username Checker
+
+The username checker searches public profile URLs across approximately 30 platforms.
+
+~~~text
+/help
+set username itskingkad
+run
+~~~
+
+Possible results include:
+
+~~~text
+[+] Possible profile found
+[-] Not found
+[!] Blocked, rate-limited, timed out, or uncertain
+~~~
+
+A possible match is only a lead. It does not prove that every account belongs to the same person.
+
+### DDoS Resilience Assessment
+
+The DDoS resilience assessment does **not** perform a DDoS attack. It makes a safe, limited HTTP inspection and looks for indicators such as:
+
+- CDN or WAF protection.
+- Rate limiting.
+- Caching.
+- HSTS.
+- Origin-shielding indicators.
+- Large responses.
+- Possible protection gaps.
+
+~~~text
+/help
+set target https://yourwebsite.com
+run
+~~~
+
+The tool explains which protections appear effective and what should be configured or verified manually.
+
+### Security Headers
+
+The security-header tool checks browser protection headers, including:
+
+- `Content-Security-Policy`
+- `Strict-Transport-Security`
+- `X-Frame-Options`
+- `Referrer-Policy`
+- `Permissions-Policy`
+- `X-Content-Type-Options`
+
+~~~text
+set target https://example.com
+run
+~~~
+
+### CVE Matching
+
+CVE stands for **Common Vulnerabilities and Exposures**. CVEs are public records describing known software vulnerabilities.
+
+The CVE tool helps identify which updates may deserve attention. A match is not automatically proof that a system is exploitable.
+
+### DNS and Email Checks
+
+DNS and email checks help explain how a domain is configured.
+
+~~~text
+set target example.com
+run
+~~~
+
+These checks can review:
+
+- A records.
+- AAAA records.
+- MX records.
+- SPF.
+- DMARC.
+- DNSSEC.
+- Nameservers.
+- Reverse DNS.
+
+## Common Commands
+
+~~~text
+help
+set target https://example.com
+set username itskingkad
+run
+clear
+back
 export json
-```
+export csv
+export md
+~~~
 
-Supported commands inside every tool:
+Generated reports are saved in:
 
-```text
-help                 Show beginner-friendly tool guidance
-set <field> <value>  Provide the selected tool's input
-run                  Execute the tool
-export json|csv|md   Save the current output under outputs/
-clear                Clear the tool log
-back                 Return to the tool list
-```
+~~~text
+outputs/
+~~~
 
-The title also displays: `run "help" in any tool to see what it actually does`.
+## Status Colors
 
-## Catalog
+| Indicator | Meaning |
+|---|---|
+| `[+]` Green | Positive result, item found, or protection observed. |
+| `[-]` Red | Negative result or possible issue. |
+| `[!]` Yellow | Warning, uncertainty, blocked request, or unverified result. |
 
-The catalog includes 16 categories and 60 tools across vulnerability review, DNS, web security, social usernames, email, IP context, cloud, people, news, business, geospatial, images, documents, monitoring, breaches, and temporary mail.
+## Settings
 
-The username checker performs bounded, Sherlock-style public URL checks across a larger platform list. It reports found, not found, blocked/rate-limited, timeout, and unknown states. It does not bypass CAPTCHAs, log in, or evade rate limits.
+The Settings screen supports optional API keys for providers such as:
 
-Many general OSINT tools are deliberately local or provider-aware. When a live source is not configured, Scylla says so instead of inventing a result.
+- Shodan.
+- Have I Been Pwned.
+- GitHub.
+- Search providers.
+- Geocoding providers.
+- NVD/CVE data providers.
 
-## Optional provider configuration
+Keys are masked and stored locally. Tools that require a provider should identify that requirement instead of generating unsupported results.
 
-Use **SETTINGS / API KEYS** in the UI, or create a local `.env` from `.env.example`. You may also copy `config.example.json` to `config.json`.
+## Current Limitations
 
-- `.env` and `config.json` are ignored by Git.
-- Keys are masked in the settings screen.
-- Reports redact common credential-shaped values.
-- Never put real keys in source files or commit them.
+Scylla intentionally does not:
 
-## Safety
+- Perform DDoS attacks or flooding.
+- Exploit vulnerabilities.
+- Test passwords against accounts.
+- Bypass CAPTCHAs or rate limits.
+- Access private profiles.
+- Track people in real time.
+- Prove that two public accounts belong to the same person.
 
-Use Scylla only for public information, files you own, and systems you are authorized to assess. It does not perform credential testing, exploitation, CAPTCHA bypass, private-account access, flooding, stress attacks, or DDoS attacks. The DDoS tool is an evidence-based, low-volume resilience review and clearly labels checks that cannot be proven safely.
+Some advanced tools currently provide safe local analysis or explain which optional provider is required.
 
-Username and people-research results are leads, not identity proof. Respect platform terms, privacy, consent, and applicable law.
+## Responsible Use
+
+Only use Scylla for lawful and authorized research.
+
+You should only inspect:
+
+- Public information.
+- Websites and systems you own.
+- Websites and systems for which you have explicit authorization to test.
+- Local files and data you are permitted to analyze.
+
+Do not use Scylla to harass, stalk, target, or gain unauthorized access to individuals, organizations, accounts, or systems.
+
+## Interpreting Results
+
+Scylla results should be treated as research leads and configuration guidance, not absolute proof.
+
+A result may be affected by:
+
+- Rate limiting.
+- Blocked requests.
+- Network errors.
+- Missing API keys.
+- Incomplete public information.
+- False positives.
+- Service changes.
+- Unavailable providers.
+
+Always verify important findings manually and use multiple reliable sources when appropriate.
+
+## Repository
+
+[![GitHub Repository](https://img.shields.io/badge/GitHub-vkxd%2FScyll-181717?style=for-the-badge&logo=github)](https://github.com/vkxd/Scyll)
+
+[Visit the Scylla repository](https://github.com/vkxd/Scyll)
