@@ -7,21 +7,31 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, RichLog, Static
 
-from ui.screens import ASCII_ART, CATEGORIES, CategorySpec, ToolSpec
+from config import PROVIDER_ENV
+from ui.catalog import CATEGORIES, CategorySpec, ToolSpec
 
 
 ENGINE_CATEGORIES = {
     "vulnerability": "vuln",
-    "social": "social",
-    "web": "infra",
-    "temps": "temp",
     "dns": "infra",
+    "web": "infra",
+    "social": "social",
+    "email": "general",
+    "ip": "general",
+    "cloud": "general",
+    "people": "general",
+    "news": "general",
+    "business": "general",
+    "geospatial": "general",
+    "images": "general",
+    "documents": "general",
+    "monitoring": "general",
     "breaches": "breach",
+    "temps": "temp",
 }
 
 
 def style_output_line(line: str) -> Text:
-    """Color every status marker without interpreting user/server text as markup."""
     styled = Text(line)
     colors = {"[+]": "#73d6a2", "[-]": "#ff6b7a", "[!]": "#f4c95d"}
     for match in re.finditer(r"\[\+\]|\[-\]|\[!\]", line):
@@ -29,46 +39,41 @@ def style_output_line(line: str) -> Text:
     return styled
 
 
-def find_category(category_key: str) -> CategorySpec:
-    return next(category for category in CATEGORIES if category.key == category_key)
+def find_category(key: str) -> CategorySpec:
+    return next(category for category in CATEGORIES if category.key == key)
 
 
-def find_tool(category: CategorySpec, tool_key: str) -> ToolSpec:
-    return next(tool for tool in category.tools if tool.key == tool_key)
+def find_tool(category: CategorySpec, key: str) -> ToolSpec:
+    return next(tool for tool in category.tools if tool.key == key)
 
 
 class MainMenu(Screen):
-    """First stage: choose an investigation category."""
-
     def __init__(self, engine):
         super().__init__()
         self.engine = engine
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static(ASCII_ART, id="brand-art")
+        yield Static("SCYLLA", id="brand-art")
         yield Static('✦ ALL IN 1 OSINT TOOL ✦  |  run "help" in any tool to see what it actually does', id="brand-subtitle")
-        yield Static("[ STATUS: READY ]  [ ACTIVE CATEGORY: NONE ]  [ PROXY POOL: 12 ROTATING ]", id="status-bar")
+        yield Static(f"[ STATUS: READY ]  [ CATALOG: {sum(len(c.tools) for c in CATEGORIES)} TOOLS ]", id="status-bar")
         with VerticalScroll(id="category-screen"):
             yield Static("SELECT A CATEGORY", classes="screen-title")
-            yield Static("Choose the type of investigation you want to run.", classes="muted")
+            yield Static("Cybersecurity, public research, media, business, maps, files, and more.", classes="muted")
             for category in CATEGORIES:
-                yield Button(
-                    f"> {category.key}/    {category.name}\n  {category.description}",
-                    id=f"category-{category.key}",
-                    classes="category-card",
-                )
+                yield Button(f"> {category.key}/    {category.name}\n  {category.description}", id=f"category-{category.key}", classes="category-card")
+        yield Button("SETTINGS / API KEYS", id="settings", classes="secondary-button")
         yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id or ""
         if button_id.startswith("category-"):
             self.app.push_screen(ToolMenu(self.engine, find_category(button_id.removeprefix("category-"))))
+        elif button_id == "settings":
+            self.app.push_screen(SettingsScreen(self.engine))
 
 
 class ToolMenu(Screen):
-    """Second stage: choose one tool from the selected category."""
-
     def __init__(self, engine, category: CategorySpec):
         super().__init__()
         self.engine = engine
@@ -82,11 +87,7 @@ class ToolMenu(Screen):
             yield Static("SELECT A TOOL", classes="panel-title")
             for tool in self.category.tools:
                 fields = ", ".join(name for name, _, _ in tool.fields) or "no input required"
-                yield Button(
-                    f"> {tool.key}\n  {tool.name} | inputs: {fields}\n  {tool.description}",
-                    id=f"tool-{tool.key.replace('-', '_')}",
-                    classes="tool-card",
-                )
+                yield Button(f"> {tool.key}\n  {tool.name} | inputs: {fields} | risk: {tool.risk}\n  {tool.description}", id=f"tool-{tool.key.replace('-', '_')}", classes="tool-card")
         yield Button("BACK TO CATEGORIES", id="back-categories", classes="secondary-button")
         yield Footer()
 
@@ -95,13 +96,11 @@ class ToolMenu(Screen):
         if button_id == "back-categories":
             self.app.pop_screen()
         elif button_id.startswith("tool-"):
-            tool_key = button_id.removeprefix("tool-").replace("_", "-")
-            self.app.push_screen(ToolCli(self.engine, self.category, find_tool(self.category, tool_key)))
+            key = button_id.removeprefix("tool-").replace("_", "-")
+            self.app.push_screen(ToolCli(self.engine, self.category, find_tool(self.category, key)))
 
 
 class ToolCli(Screen):
-    """Third stage: a dedicated CLI session for one selected tool."""
-
     def __init__(self, engine, category: CategorySpec, tool: ToolSpec):
         super().__init__()
         self.engine = engine
@@ -109,15 +108,13 @@ class ToolCli(Screen):
         self.tool = tool
         self.values: Dict[str, str] = {}
         self.status = "READY"
+        self._animation_timer = None
+        self._animation_index = 0
         self.output_lines = [
             f"[+] Selected tool: {category.key}/{tool.key}",
             f"[+] {tool.description}",
+            "[>] Run 'help' to learn what this tool does.",
         ]
-        if tool.fields:
-            self.output_lines.append("[+] Required inputs: " + ", ".join(name for name, _, _ in tool.fields))
-            self.output_lines.append("[>] Use 'set <field> <value>' and then 'run'.")
-        else:
-            self.output_lines.append("[>] This tool needs no input. Type 'run' to execute it.")
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -137,9 +134,7 @@ class ToolCli(Screen):
         self.query_one("#tool-command-input", Input).focus()
 
     def _placeholder(self) -> str:
-        if not self.tool.fields:
-            return "run | help | back"
-        return f"set {self.tool.fields[0][0]} <value> | run | help | back"
+        return "run | help | back" if not self.tool.fields else f"set {self.tool.fields[0][0]} <value> | run | help | back"
 
     def _render_log(self) -> None:
         log = self.query_one("#tool-log", RichLog)
@@ -151,6 +146,24 @@ class ToolCli(Screen):
         values = ", ".join(f"{key}={value}" for key, value in self.values.items()) or "no inputs set"
         self.query_one("#tool-status", Static).update(f"[ STATUS: {self.status} ]  [ {values} ]")
 
+    def _animate(self) -> None:
+        if not self.output_lines or not self.output_lines[-1].startswith("[>] Waiting"):
+            self.output_lines.append("[>] Waiting")
+        self._animation_index = (self._animation_index % 3) + 1
+        self.output_lines[-1] = "[>] Waiting" + "." * self._animation_index
+        self._render_log()
+
+    def _start_animation(self) -> None:
+        self._stop_animation()
+        self._animation_index = 0
+        self._animation_timer = self.set_interval(0.35, self._animate)
+
+    def _stop_animation(self) -> None:
+        if self._animation_timer is not None:
+            self._animation_timer.pause()
+            self._animation_timer = None
+        self.output_lines = [line for line in self.output_lines if not line.startswith("[>] Waiting")]
+
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         command = event.value.strip()
         event.input.value = ""
@@ -159,6 +172,7 @@ class ToolCli(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "back-tools":
+            self._stop_animation()
             self.app.pop_screen()
 
     async def execute_command(self, command: str) -> None:
@@ -168,6 +182,7 @@ class ToolCli(Screen):
         if action == "help":
             self._write_help()
         elif action == "back":
+            self._stop_animation()
             self.app.pop_screen()
             return
         elif action == "clear":
@@ -176,45 +191,103 @@ class ToolCli(Screen):
             self._set_value(parts[1].lower(), " ".join(parts[2:]))
         elif action == "run":
             await self._run_tool()
+        elif action == "export":
+            self._export_report(parts[1].lower() if len(parts) > 1 else "json")
         else:
             self.output_lines.append("[!] Unknown command. Type 'help' for this tool's commands.")
         self._render_log()
         self._update_status()
 
     def _write_help(self) -> None:
-        self.output_lines.append("ABOUT THIS TOOL")
-        self.output_lines.append(f"What it does: {self.tool.what_it_does}")
-        self.output_lines.append(f"Why it matters: {self.tool.why_it_matters}")
-        self.output_lines.append("")
-        self.output_lines.append("Commands for this tool:")
-        for field_name, label, placeholder in self.tool.fields:
-            self.output_lines.append(f"  set {field_name} <value>   {label} (example: {placeholder})")
-        self.output_lines.append("  run                      Execute the selected tool")
-        self.output_lines.append("  clear                    Clear this tool's output")
-        self.output_lines.append("  back                     Return to the tool list")
+        self.output_lines.extend([
+            "ABOUT THIS TOOL",
+            f"What it does: {self.tool.what_it_does}",
+            f"Why it matters: {self.tool.why_it_matters}",
+            f"Limitations: {self.tool.limitations}",
+            f"Risk level: {self.tool.risk}",
+            "Commands for this tool:",
+        ])
+        for name, label, example in self.tool.fields:
+            self.output_lines.append(f"  set {name} <value>   {label} (example: {example})")
+        self.output_lines.extend([
+            "  run   Execute the selected tool",
+            "  export json|csv|md   Save the current output locally",
+            "  clear   Clear output",
+            "  back   Return to tools",
+        ])
 
-    def _set_value(self, field_name: str, value: str) -> None:
-        known_fields = {name for name, _, _ in self.tool.fields}
-        if field_name not in known_fields:
-            self.output_lines.append(f"[!] This tool does not accept '{field_name}'.")
+    def _set_value(self, name: str, value: str) -> None:
+        if name not in {field[0] for field in self.tool.fields}:
+            self.output_lines.append(f"[!] This tool does not accept '{name}'.")
             return
-        self.values[field_name] = value
-        self.output_lines.append(f"[+] Set {field_name}: {value}")
+        self.values[name] = value
+        self.output_lines.append(f"[+] Set {name}: {value}")
+
+    def _export_report(self, kind: str) -> None:
+        if kind not in {"json", "csv", "md"}:
+            self.output_lines.append("[!] Export format must be json, csv, or md.")
+            return
+        result = "\n".join(self.output_lines)
+        paths = self.engine.export(result, next(iter(self.values.values()), "no-target"), self.tool.key)
+        self.output_lines.append(f"[+] Report saved: {paths[kind]}")
 
     async def _run_tool(self) -> None:
         missing = [name for name, _, _ in self.tool.fields if not self.values.get(name)]
         if missing:
-            self.output_lines.append(f"[!] Missing input: {', '.join(missing)}")
-            self.output_lines.append(f"[>] Set it with: set {missing[0]} <value>")
+            self.output_lines.extend([f"[!] Missing input: {', '.join(missing)}", f"[>] Set it with: set {missing[0]} <value>"])
             return
         self.status = "RUNNING"
         self._update_status()
         self.output_lines.append(f"[>] Executing {self.tool.name}...")
         self._render_log()
+        self._start_animation()
         target = next((self.values[name] for name, _, _ in self.tool.fields), "")
-        result = await self.engine.run_module(ENGINE_CATEGORIES[self.category.key], self.tool.module_id, target)
-        self.output_lines.extend(str(result).splitlines())
-        self.status = "READY"
+        try:
+            result = await self.engine.run_module(ENGINE_CATEGORIES[self.category.key], self.tool.module_id, target)
+            self.output_lines.extend(str(result).splitlines())
+        except Exception as error:
+            self.output_lines.append(f"[-] Tool failed: {type(error).__name__}: {error}")
+        finally:
+            self._stop_animation()
+            self.status = "READY"
+            self._render_log()
+            self._update_status()
+
+
+class SettingsScreen(Screen):
+    def __init__(self, engine):
+        super().__init__()
+        self.engine = engine
+        self.config = engine.config
+        self.inputs: Dict[str, Input] = {}
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        yield Static("SCYLLA / SETTINGS", classes="screen-title")
+        yield Static("Enter your own optional provider keys. Values are saved locally and displayed masked.", classes="muted")
+        with VerticalScroll(id="settings-screen"):
+            for provider in PROVIDER_ENV:
+                yield Static(f"{provider.upper()} — {self.config.masked_key(provider)}", id=f"provider-label-{provider}", classes="panel-title")
+                field = Input(placeholder=f"New {provider} API key/token (leave blank to keep current)", password=True, id=f"provider-{provider}")
+                self.inputs[provider] = field
+                yield field
+            yield Button("SAVE LOCAL SETTINGS", id="save-settings", classes="secondary-button")
+            yield Button("BACK", id="back-settings", classes="secondary-button")
+        yield Footer()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        button_id = event.button.id or ""
+        if button_id == "save-settings":
+            for provider, field in self.inputs.items():
+                if field.value.strip():
+                    self.config.set_provider_key(provider, field.value.strip())
+                    field.value = ""
+            self.config.save()
+            self.notify("Settings saved locally. Keys remain masked.")
+            for provider in self.inputs:
+                self.query_one(f"#provider-label-{provider}", Static).update(f"{provider.upper()} — {self.config.masked_key(provider)}")
+        elif button_id == "back-settings":
+            self.app.pop_screen()
 
 
 CategoryMenu = MainMenu

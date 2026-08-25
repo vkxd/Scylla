@@ -1,0 +1,14 @@
+{
+  "providers": {
+    "shodan": { "api_key": "" },
+    "hibp": { "api_key": "" },
+    "github": { "token": "" },
+    "search": { "api_key": "" },
+    "geocoding": { "api_key": "" },
+    "nvd": { "api_key": "" }
+  },
+  "settings": {
+    "request_timeout_seconds": 10,
+    "use_optional_providers": true
+  }
+}

@@ -26,10 +26,9 @@ class BreachDB(BasePlugin):
         has_numbers = sum(1 for password in passwords if any(char.isdigit() for char in password))
         number_ratio = (has_numbers / len(passwords) * 100) if passwords else 0
         return (
-            f"Password Profiler Analysis ({len(passwords)} passwords):\n"
+            f"Password Profiler Analysis ({len(passwords)} entries):\n"
             f"Average Length: {avg_len:.1f}\n"
             f"Contain Numbers: {number_ratio:.1f}%\n\n"
-            "[+] Generated mutation rules for authorized audits:\n"
-            "- Append '123', '1234', or '!'\n"
-            "- Capitalize first letter"
+            "[!] This is a defensive policy review only; no login attempts or mutation wordlists are generated.\n"
+            "[+] Recommended: use unique passwords, a password manager, MFA, and breach-notification rotation."
         )

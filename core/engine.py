@@ -1,6 +1,9 @@
 import httpx
 
+from config import ConfigStore
+from core.reporting import export_report
 from plugins.breach import BreachDB
+from plugins.general import GeneralOSINT
 from plugins.infra import InfraDNS
 from plugins.social import SocialIntel
 from plugins.temp_mail import TempMail
@@ -9,11 +12,14 @@ from plugins.vuln_finder import VulnFinder
 
 class ScyllaEngine:
     def __init__(self):
-        self.client = httpx.AsyncClient(timeout=10.0, follow_redirects=True)
+        self.config = ConfigStore()
+        timeout = float(self.config.setting("request_timeout_seconds", 10))
+        self.client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
         self.modules = {
             "vuln": VulnFinder(self.client),
             "social": SocialIntel(self.client),
             "infra": InfraDNS(self.client),
+            "general": GeneralOSINT(self.client),
             "breach": BreachDB(self.client),
             "temp": TempMail(self.client),
         }
@@ -22,6 +28,18 @@ class ScyllaEngine:
         try:
             if module_id == "run_all":
                 return await self.modules[category].run_all(target)
-            return await self.modules[category].run_sub(module_id, target)
+            module = self.modules[category]
+            result = await module.run_sub(module_id, target)
+            # Some catalog entries are shared by more than one category. Use the
+            # general safe-check implementation rather than duplicating handlers.
+            if isinstance(result, str) and "not registered" in result.lower():
+                return await self.modules["general"].run_sub(module_id, target)
+            return result
         except Exception as error:
-            return f"[!] Error executing module: {error}"
+            return f"[!] Error executing module: {type(error).__name__}: {error}"
+
+    def export(self, result, target, tool):
+        return export_report(result, target, tool)
+
+    async def close(self):
+        await self.client.aclose()

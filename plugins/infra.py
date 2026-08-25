@@ -17,7 +17,7 @@ class InfraDNS(BasePlugin):
     async def run_sub(self, sub_id, target):
         if sub_id in {"web_info", "infra_map"}:
             return await self._expanded_report(target, sub_id)
-        return await self.run_all(target)
+        return f"[!] Infrastructure tool '{sub_id}' is not registered."
 
     async def _expanded_report(self, target, sub_id):
         report_title = "Website Information" if sub_id == "web_info" else "Passive Infrastructure Map"
