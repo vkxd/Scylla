@@ -123,6 +123,7 @@ CATEGORIES = [
         t("predict-creds", "Credential Analyzer", "Profile an authorized local text dataset.", "analyze_passwords", FILE, "Reviews an authorized local text dataset for password patterns.", "It helps owners identify risky reuse and improve password policy.", "Never use results to attempt logins.", "high"),
     ]),
     CategorySpec("temps", "TEMPS", "Disposable mailbox utilities.", [
-        t("tempmail", "Temporary Mail", "Generate a disposable inbox.", "run_all", [], "Creates a temporary mailbox through the configured provider.", "It can reduce spam for low-trust signups; never use it for important accounts.", "Provider availability varies."),
+        t("tempmail", "Temporary Mail", "Generate a disposable inbox.", "run_all", [("provider", "Provider", "fake.legal")], "Creates a temporary mailbox using fake.legal, anonbox, or maildrop.", "It can reduce spam for low-trust signups; never use it for important accounts.", "Provider availability varies; fake.legal is fastest.", "low"),
+        t("tempmail-check", "Check Inbox", "Check a temp inbox for new emails.", "check_inbox", [("email", "Email address", "user@fake.legal")], "Retrieves messages from a generated temporary inbox.", "Useful for receiving verification codes without exposing your real email.", "Only works with inboxes you just created.", "low"),
     ]),
 ]
