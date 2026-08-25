@@ -48,29 +48,75 @@ def find_tool(category: CategorySpec, key: str) -> ToolSpec:
 
 
 class MainMenu(Screen):
+    """Discord-style workspace: categories stay pinned on the left, tools on the right."""
+
     def __init__(self, engine):
         super().__init__()
         self.engine = engine
+        self.selected_category = CATEGORIES[0].key
+        self._tool_buttons: Dict[str, ToolSpec] = {}
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static("SCYLLA", id="brand-art")
         yield Static('✦ ALL IN 1 OSINT TOOL ✦  |  run "help" in any tool to see what it actually does', id="brand-subtitle")
         yield Static(f"[ STATUS: READY ]  [ CATALOG: {sum(len(c.tools) for c in CATEGORIES)} TOOLS ]", id="status-bar")
-        with VerticalScroll(id="category-screen"):
-            yield Static("SELECT A CATEGORY", classes="screen-title")
-            yield Static("Cybersecurity, public research, media, business, maps, files, and more.", classes="muted")
-            for category in CATEGORIES:
-                yield Button(f"> {category.key}/    {category.name}\n  {category.description}", id=f"category-{category.key}", classes="category-card")
-        yield Button("SETTINGS / API KEYS", id="settings", classes="secondary-button")
+        with Horizontal(id="category-workspace"):
+            with Vertical(id="category-sidebar"):
+                yield Static("CATEGORIES", id="sidebar-title")
+                with VerticalScroll(id="category-list"):
+                    for category in CATEGORIES:
+                        yield Button(
+                            f"{category.key}/\\n{category.name}",
+                            id=f"category-{category.key}",
+                            classes="category-card",
+                        )
+                yield Button("⚙ SETTINGS", id="settings", classes="secondary-button")
+            with Vertical(id="tool-directory"):
+                yield Static("SELECT A CATEGORY", classes="screen-title", id="directory-title")
+                yield Static("Choose a category from the left to view its tools.", classes="muted", id="directory-description")
+                for category in CATEGORIES:
+                    with VerticalScroll(
+                        id=f"category-panel-{category.key}",
+                        classes="category-panel",
+                    ):
+                        yield Static("TOOLS", classes="panel-title")
+                        for tool in category.tools:
+                            fields = ", ".join(name for name, _, _ in tool.fields) or "no input required"
+                            button_id = f"tool-{tool.key.replace('-', '_')}"
+                            if button_id in self._tool_buttons:
+                                button_id = f"{button_id}-{category.key}"
+                            self._tool_buttons[button_id] = tool
+                            yield Button(
+                                f"> {tool.key}\\n  {tool.name} | inputs: {fields} | risk: {tool.risk}\\n  {tool.description}",
+                                id=button_id,
+                                classes="tool-card",
+                            )
         yield Footer()
+
+    def on_mount(self) -> None:
+        self._show_category(self.selected_category)
+
+    def _show_category(self, category_key: str) -> None:
+        category = find_category(category_key)
+        self.selected_category = category.key
+        self.query_one("#directory-title", Static).update(f"{category.name}  /  {category.key}")
+        self.query_one("#directory-description", Static).update(category.description)
+        for candidate in CATEGORIES:
+            panel = self.query_one(f"#category-panel-{candidate.key}")
+            panel.styles.display = "block" if candidate.key == category.key else "none"
+            button = self.query_one(f"#category-{candidate.key}", Button)
+            button.set_class(candidate.key == category.key, "active")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id or ""
         if button_id.startswith("category-"):
-            self.app.push_screen(ToolMenu(self.engine, find_category(button_id.removeprefix("category-"))))
+            self._show_category(button_id.removeprefix("category-"))
         elif button_id == "settings":
             self.app.push_screen(SettingsScreen(self.engine))
+        elif button_id in self._tool_buttons:
+            tool = self._tool_buttons[button_id]
+            self.app.push_screen(ToolCli(self.engine, find_category(self.selected_category), tool))
 
 
 class ToolMenu(Screen):
