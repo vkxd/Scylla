@@ -1,0 +1,141 @@
+Screen {
+    background: #0b0f14;
+    color: #d7dee7;
+}
+
+Header {
+    background: #111820;
+    color: #ff4f7b;
+}
+
+Footer {
+    background: #111820;
+    color: #7f8b99;
+}
+
+#brand-art {
+    color: #ff4f7b;
+    height: auto;
+    text-align: center;
+    text-style: bold;
+    margin: 1 0 0 0;
+}
+
+#brand-subtitle {
+    color: #f5f7fa;
+    height: auto;
+    min-height: 1;
+    content-align: center middle;
+    text-align: center;
+    text-style: bold;
+    padding: 0 1;
+}
+
+#status-bar,
+#tool-status {
+    background: #151d26;
+    color: #73d6a2;
+    height: 1;
+    padding: 0 1;
+    margin: 1 0;
+}
+
+#category-screen {
+    height: 1fr;
+    margin: 1 2;
+    padding: 1;
+    border: solid #2c3946;
+}
+
+#tool-screen {
+    height: 1fr;
+    margin: 1 2;
+    padding: 1;
+    border: solid #2c3946;
+}
+
+#cli-layout {
+    height: 1fr;
+    margin: 1 2;
+}
+
+#tool-log {
+    height: 1fr;
+    min-height: 8;
+    border: solid #2c3946;
+    background: #080c11;
+    padding: 1;
+}
+
+#tool-log .log-line {
+    color: #d7dee7;
+}
+
+#tool-command-row {
+    height: 3;
+    margin-top: 1;
+    background: #151d26;
+    border: solid #ff4f7b;
+}
+
+#tool-prompt-label {
+    width: 32;
+    padding: 1 0 0 1;
+    color: #73d6a2;
+    text-style: bold;
+}
+
+#tool-command-input {
+    width: 1fr;
+    border: none;
+    background: transparent;
+    color: #f5f7fa;
+}
+
+.screen-title,
+.panel-title {
+    color: #ff4f7b;
+    text-style: bold;
+    height: auto;
+    margin: 1 2;
+}
+
+.muted {
+    color: #7f8b99;
+    height: auto;
+    margin: 0 2 1 2;
+}
+
+.category-card,
+.tool-card,
+.secondary-button {
+    width: 100%;
+    height: auto;
+    min-height: 2;
+    margin: 0 0 1 0;
+    padding: 0 1;
+    background: #151d26;
+    color: #cbd5df;
+    border: solid #2c3946;
+}
+
+.category-card:hover,
+.tool-card:hover,
+.secondary-button:hover {
+    background: #ff4f7b;
+    color: #ffffff;
+    border: solid #ff7698;
+}
+
+#back-categories,
+#back-tools {
+    width: auto;
+    margin: 0 2 1 2;
+}
+
+.results-box {
+    height: 1fr;
+    border: solid #2c3946;
+    padding: 1;
+    background: #080c11;
+}
