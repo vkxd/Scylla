@@ -39,6 +39,25 @@ def style_output_line(line: str) -> Text:
     return styled
 
 
+RISK_COLORS = {
+    "low": "#73d6a2",
+    "medium": "#f4c95d",
+    "high": "#ff6b7a",
+}
+
+
+def make_tool_button_label(tool: ToolSpec, fields: str) -> Text:
+    label = Text()
+    label.append(f"> {tool.key}", style="bold white")
+    label.append("\n")
+    label.append(f"  {tool.name} | inputs: {fields} | risk: ", style="white")
+    risk_color = RISK_COLORS.get(tool.risk, "#f4c95d")
+    label.append(tool.risk, style=f"bold {risk_color}")
+    label.append("\n")
+    label.append(f"  {tool.description}", style="#7f8b99")
+    return label
+
+
 def find_category(key: str) -> CategorySpec:
     return next(category for category in CATEGORIES if category.key == key)
 
@@ -58,7 +77,16 @@ class MainMenu(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static("SCYLLA", id="brand-art")
+        yield Static(
+            " ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄   ▄▄ ▄▄▄     ▄▄▄     ▄▄▄▄▄▄ \n"
+            "█       █       █  █ █  █   █   █   █   █      █\n"
+            "█  ▄▄▄▄▄█       █  █▄█  █   █   █   █   █  ▄   █\n"
+            "█ █▄▄▄▄▄█     ▄▄█       █   █   █   █   █ █▄█  █\n"
+            "█▄▄▄▄▄  █    █  █▄     ▄█   █▄▄▄█   █▄▄▄█      █\n"
+            " ▄▄▄▄▄█ █    █▄▄  █   █ █       █       █  ▄   █\n"
+            "█▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█ █▄▄▄█ █▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█▄█ █▄▄█",
+            id="brand-art",
+        )
         yield Static('✦ ALL IN 1 OSINT TOOL ✦  |  run "help" in any tool to see what it actually does', id="brand-subtitle")
         yield Static(f"[ STATUS: READY ]  [ CATALOG: {sum(len(c.tools) for c in CATEGORIES)} TOOLS ]", id="status-bar")
         with Horizontal(id="category-workspace"):
@@ -67,7 +95,7 @@ class MainMenu(Screen):
                 with VerticalScroll(id="category-list"):
                     for category in CATEGORIES:
                         yield Button(
-                            f"{category.key}/\\n{category.name}",
+                            f" {category.name}",
                             id=f"category-{category.key}",
                             classes="category-card",
                         )
@@ -88,7 +116,7 @@ class MainMenu(Screen):
                                 button_id = f"{button_id}-{category.key}"
                             self._tool_buttons[button_id] = tool
                             yield Button(
-                                f"> {tool.key}\\n  {tool.name} | inputs: {fields} | risk: {tool.risk}\\n  {tool.description}",
+                                make_tool_button_label(tool, fields),
                                 id=button_id,
                                 classes="tool-card",
                             )
@@ -100,7 +128,7 @@ class MainMenu(Screen):
     def _show_category(self, category_key: str) -> None:
         category = find_category(category_key)
         self.selected_category = category.key
-        self.query_one("#directory-title", Static).update(f"{category.name}  /  {category.key}")
+        self.query_one("#directory-title", Static).update(f"{category.key}")
         self.query_one("#directory-description", Static).update(category.description)
         for candidate in CATEGORIES:
             panel = self.query_one(f"#category-panel-{candidate.key}")
@@ -133,7 +161,7 @@ class ToolMenu(Screen):
             yield Static("SELECT A TOOL", classes="panel-title")
             for tool in self.category.tools:
                 fields = ", ".join(name for name, _, _ in tool.fields) or "no input required"
-                yield Button(f"> {tool.key}\n  {tool.name} | inputs: {fields} | risk: {tool.risk}\n  {tool.description}", id=f"tool-{tool.key.replace('-', '_')}", classes="tool-card")
+                yield Button(make_tool_button_label(tool, fields), id=f"tool-{tool.key.replace('-', '_')}", classes="tool-card")
         yield Button("BACK TO CATEGORIES", id="back-categories", classes="secondary-button")
         yield Footer()
 
@@ -245,12 +273,17 @@ class ToolCli(Screen):
         self._update_status()
 
     def _write_help(self) -> None:
+        risk_label = {
+            "low": "[+] low",
+            "medium": "[!] medium",
+            "high": "[-] high",
+        }.get(self.tool.risk, f"[!] {self.tool.risk}")
         self.output_lines.extend([
             "ABOUT THIS TOOL",
             f"What it does: {self.tool.what_it_does}",
             f"Why it matters: {self.tool.why_it_matters}",
             f"Limitations: {self.tool.limitations}",
-            f"Risk level: {self.tool.risk}",
+            f"Risk level: {risk_label}",
             "Commands for this tool:",
         ])
         for name, label, example in self.tool.fields:
