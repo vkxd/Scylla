@@ -24,11 +24,14 @@ class ScyllaEngine:
             "temp": TempMail(self.client),
         }
 
-    async def run_module(self, category, module_id, target):
+    async def run_module(self, category, module_id, target, values=None):
         try:
-            if module_id == "run_all":
-                return await self.modules[category].run_all(target)
             module = self.modules[category]
+            # Pass values to modules that need them (like tempmail)
+            if values:
+                module.values = values
+            if module_id == "run_all":
+                return await module.run_all(target)
             result = await module.run_sub(module_id, target)
             # Some catalog entries are shared by more than one category. Use the
             # general safe-check implementation rather than duplicating handlers.

@@ -255,6 +255,8 @@ class ToolCli(Screen):
         self.output_lines.append(f"scylla ({self.category.key}/{self.tool.key})> {command}")
         if action == "help":
             self._write_help()
+        elif action == "list":
+            self._list_providers()
         elif action == "back":
             self._stop_animation()
             self.app.pop_screen()
@@ -264,13 +266,38 @@ class ToolCli(Screen):
         elif action == "set" and len(parts) >= 3:
             self._set_value(parts[1].lower(), " ".join(parts[2:]))
         elif action == "run":
-            await self._run_tool()
+            run_mode = parts[1].lower() if len(parts) > 1 else ""
+            await self._run_tool(run_mode)
         elif action == "export":
             self._export_report(parts[1].lower() if len(parts) > 1 else "json")
         else:
             self.output_lines.append("[!] Unknown command. Type 'help' for this tool's commands.")
         self._render_log()
         self._update_status()
+
+    def _list_providers(self) -> None:
+        """List available providers for tools that support them (e.g., tempmail)."""
+        from plugins.temp_mail import TempMail
+        providers = TempMail.PROVIDERS
+        self.output_lines.extend([
+            "",
+            "AVAILABLE PROVIDERS",
+            "─" * 40,
+        ])
+        for p in providers:
+            if p == "fake.legal":
+                self.output_lines.append(f"  [+] {p:15} Fast, no extra dependencies")
+            elif p == "mail.tm":
+                self.output_lines.append(f"  [+] {p:15} Fast, no extra dependencies")
+            elif p == "maildrop":
+                self.output_lines.append(f"  [!] {p:15} Requires Selenium + Chrome")
+            else:
+                self.output_lines.append(f"  [!] {p}")
+        self.output_lines.extend([
+            "─" * 40,
+            "",
+            "Usage: set provider <name>",
+        ])
 
     def _write_help(self) -> None:
         risk_label = {
@@ -279,20 +306,35 @@ class ToolCli(Screen):
             "high": "[-] high",
         }.get(self.tool.risk, f"[!] {self.tool.risk}")
         self.output_lines.extend([
+            "",
+            "═" * 50,
             "ABOUT THIS TOOL",
-            f"What it does: {self.tool.what_it_does}",
-            f"Why it matters: {self.tool.why_it_matters}",
-            f"Limitations: {self.tool.limitations}",
-            f"Risk level: {risk_label}",
-            "Commands for this tool:",
+            "═" * 50,
+            "",
+            f"What it does:  {self.tool.what_it_does}",
+            "",
+            f"Why it matters:  {self.tool.why_it_matters}",
+            "",
+            f"Limitations:  {self.tool.limitations}",
+            "",
+            f"Risk level:  {risk_label}",
+            "",
+            "─" * 50,
+            "COMMANDS",
+            "─" * 50,
         ])
         for name, label, example in self.tool.fields:
-            self.output_lines.append(f"  set {name} <value>   {label} (example: {example})")
+            self.output_lines.append(f"  set {name} <value>    {label} (example: {example})")
         self.output_lines.extend([
-            "  run   Execute the selected tool",
-            "  export json|csv|md   Save the current output locally",
-            "  clear   Clear output",
-            "  back   Return to tools",
+            "",
+            "  run                   Execute the selected tool",
+            "  run provider          Create a new inbox (tempmail)",
+            "  run check             Check an existing inbox (tempmail)",
+            "  list                  List available providers",
+            "  export json|csv|md    Save the current output locally",
+            "  clear                 Clear output",
+            "  back                  Return to tools",
+            "",
         ])
 
     def _set_value(self, name: str, value: str) -> None:
@@ -310,7 +352,33 @@ class ToolCli(Screen):
         paths = self.engine.export(result, next(iter(self.values.values()), "no-target"), self.tool.key)
         self.output_lines.append(f"[+] Report saved: {paths[kind]}")
 
-    async def _run_tool(self) -> None:
+    async def _run_tool(self, run_mode: str = "") -> None:
+        # For tools with run modes (like tempmail), skip field validation
+        # and pass the run mode to the engine
+        if run_mode:
+            self.status = "RUNNING"
+            self._update_status()
+            self.output_lines.append(f"[>] Executing {self.tool.name} ({run_mode})...")
+            self._render_log()
+            self._start_animation()
+            try:
+                result = await self.engine.run_module(
+                    ENGINE_CATEGORIES[self.category.key],
+                    self.tool.module_id,
+                    run_mode,
+                    self.values
+                )
+                self.output_lines.extend(str(result).splitlines())
+            except Exception as error:
+                self.output_lines.append(f"[-] Tool failed: {type(error).__name__}: {error}")
+            finally:
+                self._stop_animation()
+                self.status = "READY"
+                self._render_log()
+                self._update_status()
+            return
+
+        # Standard tool execution — validate required fields
         missing = [name for name, _, _ in self.tool.fields if not self.values.get(name)]
         if missing:
             self.output_lines.extend([f"[!] Missing input: {', '.join(missing)}", f"[>] Set it with: set {missing[0]} <value>"])
