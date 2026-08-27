@@ -190,7 +190,7 @@ class ToolCli(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static(f"SCYLLA / {self.category.key} / {self.tool.key}", classes="screen-title")
+        yield Static(f"VELT / {self.category.key} / {self.tool.key}", classes="screen-title")
         yield Static(self.tool.description, classes="muted")
         yield Static("[ STATUS: READY ]", id="tool-status")
         with Vertical(id="cli-layout"):

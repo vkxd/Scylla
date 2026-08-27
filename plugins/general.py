@@ -40,6 +40,14 @@ class GeneralOSINT(BasePlugin):
             "article_summary": self.article_summary,
             "place_search": self.place_search,
             "network_range": self.provider_placeholder,
+            "whois_lookup": self.whois_lookup,
+            "subdomain_enum": self.subdomain_enum,
+            "tech_detect": self.tech_detect,
+            "certificate_history": self.certificate_history,
+            "asn_details": self.asn_details,
+            "email_discovery": self.email_discovery,
+            "port_services": self.port_services,
+            "threat_feed_check": self.threat_feed_check,
             "certificate_search": self.provider_placeholder,
             "asn_map": self.provider_placeholder,
             "storage_review": self.provider_placeholder,
@@ -237,6 +245,106 @@ class GeneralOSINT(BasePlugin):
 
     async def place_search(self, target):
         return f"[>] Place research target: {target}\n[!] Configure an optional geocoding provider for live place results.\n[+] You can still use coordinate-info with supplied latitude/longitude."
+
+    async def whois_lookup(self, target):
+        domain = target.strip().lower().replace("https://", "").replace("http://", "").split("/", 1)[0]
+        url = f"https://rdap.org/domain/{domain}"
+        try:
+            response = await self.client.get(url, headers={"Accept": "application/rdap+json"})
+            if response.status_code != 200:
+                return f"[!] RDAP did not return registration data for {domain} (HTTP {response.status_code})."
+            data = response.json()
+            lines = [f"[>] Public WHOIS/RDAP lookup for {domain}", f"[+] Handle: {data.get('handle', 'not published')}", f"[+] Status: {', '.join(data.get('status', [])) or 'not published'}"]
+            for event in data.get("events", []):
+                if event.get("eventAction") in {"registration", "expiration", "last changed"}:
+                    lines.append(f"[+] {event['eventAction'].title()}: {event.get('eventDate', 'not published')}")
+            nameservers = [item.get("ldhName") for item in data.get("nameservers", []) if item.get("ldhName")]
+            lines.append(f"[+] Nameservers: {', '.join(nameservers[:8]) or 'not published'}")
+            lines.append("[!] Privacy services and registry limits may hide registrant details.")
+            return "\\n".join(lines)
+        except Exception as error:
+            return f"[!] RDAP lookup failed: {type(error).__name__}"
+
+    async def subdomain_enum(self, target):
+        domain = target.strip().lower().replace("https://", "").replace("http://", "").split("/", 1)[0].lstrip("*.")
+        try:
+            response = await self.client.get("https://crt.sh/", params={"q": f"%.{domain}", "output": "json"}, headers={"Accept": "application/json"})
+            if response.status_code != 200:
+                return f"[!] crt.sh returned HTTP {response.status_code}."
+            names = set()
+            for item in response.json():
+                for name in str(item.get("name_value", "")).splitlines():
+                    name = name.strip().lower().lstrip("*.")
+                    if name == domain or name.endswith("." + domain):
+                        names.add(name)
+            return "\\n".join([f"[>] Passive certificate-transparency enumeration for {domain}", f"[+] Unique names found: {len(names)}"] + [f"[+] {name}" for name in sorted(names)[:200]] + ["[!] Names may be expired or unrelated; verify ownership and liveness."])
+        except Exception as error:
+            return f"[!] Certificate-transparency lookup failed: {type(error).__name__}"
+
+    async def tech_detect(self, target):
+        url = self._url(target)
+        try:
+            response = await self.client.get(url, headers={"User-Agent": "Velt-Public-Tech-Review/1.0"})
+            body = response.text.lower()
+            headers = {key.lower(): value.lower() for key, value in response.headers.items()}
+            signals = []
+            checks = [("Cloudflare", "cf-ray" in headers or "cloudflare" in headers.get("server", "")), ("WordPress", "wp-content" in body or "wp-includes" in body), ("Next.js", "__next_data__" in body or "_next/" in body), ("React", "react" in body), ("nginx", "nginx" in headers.get("server", "")), ("Apache", "apache" in headers.get("server", ""))]
+            signals.extend(name for name, present in checks if present)
+            return "\\n".join([f"[>] Passive technology detection for {url}", f"[+] HTTP response: {response.status_code}", f"[+] Signals: {', '.join(signals) if signals else 'none confidently detected'}", "[!] Fingerprinting is heuristic and may be hidden or spoofed."])
+        except Exception as error:
+            return f"[!] Technology detection failed: {type(error).__name__}"
+
+    async def certificate_history(self, target):
+        return await self.subdomain_enum(target)
+
+    async def asn_details(self, target):
+        host = target.strip()
+        try:
+            address = socket.gethostbyname(host)
+            response = await self.client.get(f"https://ipwho.is/{address}")
+            data = response.json()
+            connection = data.get("connection", {})
+            return "\\n".join([f"[>] Public network ownership for {host} ({address})", f"[+] ISP: {connection.get('isp', 'not published')}", f"[+] Organization: {connection.get('org', 'not published')}", f"[+] ASN: {connection.get('asn', 'not published')}", "[!] Ownership and geolocation data may be approximate."])
+        except Exception as error:
+            return f"[!] ASN lookup failed: {type(error).__name__}"
+
+    async def email_discovery(self, target):
+        response = await self.client.get(self._url(target), headers={"User-Agent": "Velt-Public-Contact-Audit/1.0"})
+        emails = sorted(set(re.findall(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", response.text, re.I)))
+        return "\\n".join([f"[>] Public email clues from {target}", f"[+] Addresses found: {len(emails)}"] + [f"[+] {email}" for email in emails[:50]] + ["[!] Only one public page was checked; do not use this for bulk harvesting."])
+
+    async def port_services(self, target):
+        import asyncio as _asyncio
+        host = target.strip()
+        ports = {80: "HTTP", 443: "HTTPS", 22: "SSH", 25: "SMTP", 53: "DNS", 3306: "MySQL", 5432: "PostgreSQL", 8080: "HTTP-alt"}
+        async def check(port, label):
+            try:
+                reader, writer = await _asyncio.wait_for(_asyncio.open_connection(host, port), timeout=1.5)
+                writer.close()
+                await writer.wait_closed()
+                return f"[!] Port {port} ({label}): Open — review whether it must be public"
+            except Exception:
+                return f"[+] Port {port} ({label}): Not reachable from this check"
+        results = await _asyncio.gather(*(check(port, label) for port, label in ports.items()))
+        return "\\n".join([f"[>] Small authorized TCP service review for {host}", *results, "[!] Only scan systems you own or are explicitly authorized to assess."])
+
+    async def threat_feed_check(self, target):
+        value = target.strip()
+        if value.startswith("http://") or value.startswith("https://"):
+            try:
+                response = await self.client.post("https://urlhaus-api.abuse.ch/v1/url/", data={"url": value})
+                data = response.json()
+                if data.get("query_status") == "no_results":
+                    return f"[+] URLhaus: no matching malware URL report for {value}.\\n[!] A clean feed result is not proof of safety."
+                return f"[-] URLhaus: matching report found for {value}.\\n[!] Investigate and contain only with proper authorization."
+            except Exception as error:
+                return f"[!] URLhaus lookup failed: {type(error).__name__}"
+        try:
+            address = socket.gethostbyname(value)
+            key = getattr(self, "config", None)
+            return f"[>] Threat-feed context for {value} ({address})\\n[!] AbuseIPDB requires an API key; configure it in Velt settings before querying IP reputation.\\n[!] No reputation claim was fabricated."
+        except Exception:
+            return "[!] Provide a valid public URL or hostname/IP address."
 
     async def provider_placeholder(self, target):
         return "\n".join([
