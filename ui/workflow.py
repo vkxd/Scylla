@@ -229,7 +229,6 @@ class ToolCli(Screen):
     def _start_animation(self) -> None:
         self._stop_animation()
         self._animation_index = 0
-        self._animate()
         self._animation_timer = self.set_interval(0.35, self._animate)
 
     def _stop_animation(self) -> None:
