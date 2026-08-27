@@ -26,13 +26,16 @@ class WebsiteCopier(BasePlugin):
     async def copy(self, target):
         project_root = Path(__file__).resolve().parents[2]
         script_candidates = (
+            Path(__file__).resolve().parent / "website_copyper_ script.py",
+            Path(__file__).resolve().parent / "website_copier_script.py",
+            Path(__file__).resolve().parent / "website_copyper_script.py",
             project_root / "website_copyper_ script.py",
             project_root / "website_copier_script.py",
             project_root / "website_copyper_script.py",
         )
         script = next((candidate for candidate in script_candidates if candidate.is_file()), None)
         if script is None:
-            return "[!] Copier script not found in the project root."
+            return "[!] Copier script not found in the project root or plugins folder."
 
         url = target.strip()
         if not url.startswith(("http://", "https://")):
