@@ -219,22 +219,24 @@ class ToolCli(Screen):
         self.query_one("#tool-status", Static).update(f"[ STATUS: {self.status} ]  [ {values} ]")
 
     def _animate(self) -> None:
-        if not self.output_lines or not self.output_lines[-1].startswith("[>] Waiting"):
-            self.output_lines.append("[>] Waiting")
+        if not self.output_lines or not self.output_lines[-1].startswith("[>] Working"):
+            self.output_lines.append("[>] Working")
         self._animation_index = (self._animation_index % 3) + 1
-        self.output_lines[-1] = "[>] Waiting" + "." * self._animation_index
+        self.output_lines[-1] = "[>] Working" + "." * self._animation_index
         self._render_log()
+        self.query_one("#tool-log", RichLog).scroll_end(animate=False)
 
     def _start_animation(self) -> None:
         self._stop_animation()
         self._animation_index = 0
+        self._animate()
         self._animation_timer = self.set_interval(0.35, self._animate)
 
     def _stop_animation(self) -> None:
         if self._animation_timer is not None:
             self._animation_timer.pause()
             self._animation_timer = None
-        self.output_lines = [line for line in self.output_lines if not line.startswith("[>] Waiting")]
+        self.output_lines = [line for line in self.output_lines if not line.startswith("[>] Working")]
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         command = event.value.strip()

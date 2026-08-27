@@ -247,10 +247,12 @@ class GeneralOSINT(BasePlugin):
         return f"[>] Place research target: {target}\n[!] Configure an optional geocoding provider for live place results.\n[+] You can still use coordinate-info with supplied latitude/longitude."
 
     async def whois_lookup(self, target):
-        domain = target.strip().lower().replace("https://", "").replace("http://", "").split("/", 1)[0]
+        domain = target.strip().lower()
+        domain = re.sub(r"^https?://", "", domain).split("/", 1)[0].split(":", 1)[0]
+        domain = domain.removeprefix("www.")
         url = f"https://rdap.org/domain/{domain}"
         try:
-            response = await self.client.get(url, headers={"Accept": "application/rdap+json"})
+            response = await self.client.get(url, headers={"Accept": "application/rdap+json"}, timeout=20)
             if response.status_code != 200:
                 return f"[!] RDAP did not return registration data for {domain} (HTTP {response.status_code})."
             data = response.json()
@@ -263,6 +265,8 @@ class GeneralOSINT(BasePlugin):
             lines.append("[!] Privacy services and registry limits may hide registrant details.")
             return "\\n".join(lines)
         except Exception as error:
+            if type(error).__name__ == "ReadTimeout":
+                return "[!] RDAP lookup timed out. The registry may be slow or unavailable; try again later or use the bare domain."
             return f"[!] RDAP lookup failed: {type(error).__name__}"
 
     async def subdomain_enum(self, target):
