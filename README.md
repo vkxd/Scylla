@@ -1,64 +1,301 @@
-# Scylla OSINT
 
-Scylla is a beginner-friendly terminal OSINT workspace for public-information research and authorized defensive security review.
 
-## Quick start
+```text
+ ██▒   █▓ ▓█████  ██▓   ▄▄▄█████▓                       
+▓██░   █▒ ▓█   ▀ ▓██▒   ▓  ██▒ ▓▒
+ ▓██  ▒░ ▒███   ▒██░   ▒ ▓██░ ▒░
+  ▒██ █░░ ▒▓█  ▄ ▒██░   ░ ▓██▓ ░                          | 
+   ▒▀█░  ▒░▒████▒░██████  ▒██▒ ░
+   ░ ▐░  ░░░ ▒░ ░░ ▒░▓    ▒ ░░
+   ░ ░░  ░ ░ ░  ░░ ░ ▒      ░
+     ░░      ░     ░ ░
+      ░  ░   ░  ░    ░
+```
+### Terminal-based OSINT & defensive security research toolkit.
+
+**VeltCLI** brings reconnaissance, security checks, public-information research, and reporting into one CLI-driven interface.
+
+> 🔎 **Research. Analyze. Verify.**
+
+[![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)](https://github.com/vkxd/VeltCLI)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/vkxd/VeltCLI)
+[![Python](https://img.shields.io/badge/python-3.x-yellow)](https://www.python.org/)
+
+---
+
+## 🖥️ Preview
+
+<!-- Replace this with a real screenshot/GIF -->
+
+<p align="center">
+  <img src="docs/preview.png" alt="VeltCLI Preview" width="850">
+</p>
+
+---
+
+## ✦ What is VeltCLI?
+
+VeltCLI is an **all-in-one terminal security research workspace**.
+
+Instead of jumping between dozens of tools, VeltCLI organizes common research workflows into a single interface.
+
+```text
+┌─ VeltCLI
+│
+├── Vulnerability
+├── DNS
+├── Web Security
+├── Social
+├── Email
+├── IP Intelligence
+├── Cloud
+├── People
+├── News
+├── Business
+├── Geospatial
+├── Images
+├── Documents
+├── Monitoring
+├── Breaches
+└── Temporary Mail
+```
+
+---
+
+## 🚀 Features
+
+| Category           | Capabilities                                     |
+| ------------------ | ------------------------------------------------ |
+| 🌐 Web Security    | Headers, redirects, uptime, public-page analysis |
+| 🧬 DNS             | DNS records, SPF, DMARC, DNSSEC, ASN             |
+| 🔍 Vulnerability   | CVE research, security checks, exposure analysis |
+| 👤 Social          | Public username discovery                        |
+| 📧 Email           | Domain security & header analysis                |
+| 🌎 IP Intelligence | Resolution, reverse DNS & network context        |
+| ☁️ Cloud           | CDN, storage & origin analysis                   |
+| 📰 News            | Article research & source comparison             |
+| 🗺️ Geospatial     | Public location & coordinate research            |
+| 🖼️ Images         | Metadata, hashes & OCR workflows                 |
+| 📄 Documents       | Metadata & text extraction                       |
+| 📡 Monitoring      | Uptime & certificate monitoring                  |
+| 📊 Reporting       | JSON, CSV & Markdown exports                     |
+
+---
+
+## ⚡ Quick Start
+
+### 1. Clone
+
+```bash
+git clone https://github.com/vkxd/VeltCLI.git
+cd VeltCLI
+```
+
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
+```
+
+### 3. Launch
+
+```bash
 python main.py
 ```
 
-The UI flow is:
+---
 
-1. Select a category.
-2. Select a tool.
-3. Run `help` to see what it does, why it matters, its limits, and its required inputs.
-4. Set the tool's input and run it.
+## 🎮 How It Works
+
+VeltCLI uses a simple **category → tool → CLI** workflow.
+
+```text
+Category
+   ↓
+Tool
+   ↓
+Configure
+   ↓
+Run
+   ↓
+Results
+   ↓
+Export
+```
 
 Example:
 
 ```text
-Select vulnerability
-Select ddos-assessment
 /help
 set target https://example.com
 run
-export json
 ```
 
-Supported commands inside every tool:
+Export results whenever you need:
 
 ```text
-help                 Show beginner-friendly tool guidance
-set <field> <value>  Provide the selected tool's input
-run                  Execute the tool
-export json|csv|md   Save the current output under outputs/
-clear                Clear the tool log
-back                 Return to the tool list
+export json
+export csv
+export md
 ```
 
-The title also displays: `run "help" in any tool to see what it actually does`.
+Reports are stored in:
 
-## Catalog
+```text
+outputs/
+```
 
-The catalog includes 16 categories and 60 tools across vulnerability review, DNS, web security, social usernames, email, IP context, cloud, people, news, business, geospatial, images, documents, monitoring, breaches, and temporary mail.
+---
 
-The username checker performs bounded, Sherlock-style public URL checks across a larger platform list. It reports found, not found, blocked/rate-limited, timeout, and unknown states. It does not bypass CAPTCHAs, log in, or evade rate limits.
+## 🧩 Example Tools
 
-Many general OSINT tools are deliberately local or provider-aware. When a live source is not configured, Scylla says so instead of inventing a result.
+### Username Research
 
-## Optional provider configuration
+```text
+/help
+set username example_user
+run
+```
 
-Use **SETTINGS / API KEYS** in the UI, or create a local `.env` from `.env.example`. You may also copy `config.example.json` to `config.json`.
+Returns possible public profile matches.
 
-- `.env` and `config.json` are ignored by Git.
-- Keys are masked in the settings screen.
-- Reports redact common credential-shaped values.
-- Never put real keys in source files or commit them.
+> Results are **leads**, not proof of identity.
 
-## Safety
+### Security Headers
 
-Use Scylla only for public information, files you own, and systems you are authorized to assess. It does not perform credential testing, exploitation, CAPTCHA bypass, private-account access, flooding, stress attacks, or DDoS attacks. The DDoS tool is an evidence-based, low-volume resilience review and clearly labels checks that cannot be proven safely.
+```text
+set target https://example.com
+run
+```
 
-Username and people-research results are leads, not identity proof. Respect platform terms, privacy, consent, and applicable law.
+Checks headers such as:
+
+```text
+Content-Security-Policy
+Strict-Transport-Security
+X-Frame-Options
+Referrer-Policy
+Permissions-Policy
+```
+
+### DNS Research
+
+```text
+set target example.com
+run
+```
+
+Can inspect:
+
+```text
+A / AAAA
+MX
+SPF
+DMARC
+DNSSEC
+Nameservers
+Reverse DNS
+```
+
+---
+
+## 🏗️ Project Structure
+
+```text
+VeltCLI/
+├── core/          # Core application logic
+├── plugins/       # VeltCLI tools & modules
+├── ui/            # Terminal interface
+├── docs/          # Documentation & assets
+├── main.py        # Entry point
+├── config.py      # Configuration
+├── requirements.txt
+└── outputs/       # Generated reports
+```
+
+---
+
+## 🔌 API Providers
+
+VeltCLI can optionally integrate with external providers such as:
+
+* Shodan
+* Have I Been Pwned
+* GitHub
+* Search providers
+* Geocoding providers
+* NVD / CVE providers
+
+API keys are stored locally and masked in the interface.
+
+---
+
+## 🛡️ Safety
+
+VeltCLI is designed for **lawful OSINT and defensive security research**.
+
+It does **not**:
+
+* ❌ Perform DDoS attacks
+* ❌ Exploit vulnerabilities
+* ❌ Test passwords against accounts
+* ❌ Bypass CAPTCHAs or rate limits
+* ❌ Access private profiles
+* ❌ Track people in real time
+* ❌ Claim public accounts belong to the same person
+
+Use VeltCLI only against systems, data, and services you're authorized to research.
+
+---
+
+## ⚠️ Results ≠ Proof
+
+VeltCLI produces **research leads and configuration guidance**.
+
+Results can be affected by:
+
+* Rate limits
+* Blocked requests
+* Missing API keys
+* Network failures
+* Incomplete public data
+* False positives
+* Provider changes
+
+**Verify important findings manually.**
+
+---
+
+## 🗺️ Roadmap
+
+* [x] Modular CLI architecture
+* [x] Category-based interface
+* [x] Export system
+* [x] DNS research
+* [x] Web security checks
+* [x] Username research
+* [ ] More plugins
+* [ ] Improved reporting
+* [ ] Plugin marketplace
+* [ ] Better configuration system
+* [ ] Expanded provider support
+
+---
+
+## 📜 License
+
+VeltCLI is released under the **MIT License**.
+
+---
+
+<div align="center">
+
+### ⚡ VeltCLI
+
+**OSINT • Security Research • Reconnaissance**
+
+Built by **[@vkxd](https://github.com/vkxd)**
+
+⭐ Star the repo if you find it useful.
+
+</div>
