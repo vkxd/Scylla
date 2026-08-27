@@ -1,235 +1,301 @@
+
+
 ```text
-   ____                    _ _           ____   _____ _____ _   _ _____
-  / ___|  ___ _   _  ___  | | | __ _    / ___| | ____|_   _| | | | ____|
-  \___ \ / __| | | |/ _ \ | | |/ _` |   \___ \ |  _|   | | | | | |  _|
-   ___) | (__| |_| |  __/ | | | (_| |    ___) || |___  | | | |_| | |___
-  |____/ \___|\__,_|\___| |_|_|\__,_|   |____/ |_____| |_|  \___/|_____|
+ ██▒   █▓ ▓█████  ██▓   ▄▄▄█████▓                       
+▓██░   █▒ ▓█   ▀ ▓██▒   ▓  ██▒ ▓▒
+ ▓██  ▒░ ▒███   ▒██░   ▒ ▓██░ ▒░
+  ▒██ █░░ ▒▓█  ▄ ▒██░   ░ ▓██▓ ░                          | 
+   ▒▀█░  ▒░▒████▒░██████  ▒██▒ ░
+   ░ ▐░  ░░░ ▒░ ░░ ▒░▓    ▒ ░░
+   ░ ░░  ░ ░ ░  ░░ ░ ▒      ░
+     ░░      ░     ░ ░
+      ░  ░   ░  ░    ░
+```
+### Terminal-based OSINT & defensive security research toolkit.
+
+**VeltCLI** brings reconnaissance, security checks, public-information research, and reporting into one CLI-driven interface.
+
+> 🔎 **Research. Analyze. Verify.**
+
+[![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)](https://github.com/vkxd/VeltCLI)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/vkxd/VeltCLI)
+[![Python](https://img.shields.io/badge/python-3.x-yellow)](https://www.python.org/)
+
+---
+
+## 🖥️ Preview
+
+<!-- Replace this with a real screenshot/GIF -->
+
+<p align="center">
+  <img src="docs/preview.png" alt="VeltCLI Preview" width="850">
+</p>
+
+---
+
+## ✦ What is VeltCLI?
+
+VeltCLI is an **all-in-one terminal security research workspace**.
+
+Instead of jumping between dozens of tools, VeltCLI organizes common research workflows into a single interface.
+
+```text
+┌─ VeltCLI
+│
+├── Vulnerability
+├── DNS
+├── Web Security
+├── Social
+├── Email
+├── IP Intelligence
+├── Cloud
+├── People
+├── News
+├── Business
+├── Geospatial
+├── Images
+├── Documents
+├── Monitoring
+├── Breaches
+└── Temporary Mail
 ```
 
-# Scylla
+---
 
-[![OSINT](https://img.shields.io/badge/Focus-OSINT-4B0082?style=for-the-badge)](https://en.wikipedia.org/wiki/Open-source_intelligence)
-[![Defensive Security](https://img.shields.io/badge/Focus-Defensive%20Security-1F6FEB?style=for-the-badge)](https://www.nist.gov/cyberframework)
-[![Terminal](https://img.shields.io/badge/Interface-Terminal-111111?style=for-the-badge)](https://en.wikipedia.org/wiki/Computer_terminal)
-[![Authorized Research](https://img.shields.io/badge/Use-Authorized%20Research-2EA44F?style=for-the-badge)](https://github.com/vkxd/Scyll)
+## 🚀 Features
 
-Scylla is a terminal-based OSINT and defensive security research tool. It helps you investigate public information, review websites you own or are authorized to test, and organize findings in one interface.
+| Category           | Capabilities                                     |
+| ------------------ | ------------------------------------------------ |
+| 🌐 Web Security    | Headers, redirects, uptime, public-page analysis |
+| 🧬 DNS             | DNS records, SPF, DMARC, DNSSEC, ASN             |
+| 🔍 Vulnerability   | CVE research, security checks, exposure analysis |
+| 👤 Social          | Public username discovery                        |
+| 📧 Email           | Domain security & header analysis                |
+| 🌎 IP Intelligence | Resolution, reverse DNS & network context        |
+| ☁️ Cloud           | CDN, storage & origin analysis                   |
+| 📰 News            | Article research & source comparison             |
+| 🗺️ Geospatial     | Public location & coordinate research            |
+| 🖼️ Images         | Metadata, hashes & OCR workflows                 |
+| 📄 Documents       | Metadata & text extraction                       |
+| 📡 Monitoring      | Uptime & certificate monitoring                  |
+| 📊 Reporting       | JSON, CSV & Markdown exports                     |
 
-> Use Scylla as a research and configuration-guidance tool. Results may be incomplete, blocked, uncertain, or require manual verification.
+---
 
-## How the UI Works
+## ⚡ Quick Start
 
-Scylla organizes tools into categories:
+### 1. Clone
 
-1. Categories appear in the left sidebar.
-2. Select a category.
-3. The category's tools appear on the right.
-4. Select a tool.
-5. Use the tool-specific CLI.
-6. Run `help` to learn what the tool does.
+```bash
+git clone https://github.com/vkxd/VeltCLI.git
+cd VeltCLI
+```
 
-### Example
+### 2. Install dependencies
 
-~~~text
-Click vulnerability
-Click security-headers
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Launch
+
+```bash
+python main.py
+```
+
+---
+
+## 🎮 How It Works
+
+VeltCLI uses a simple **category → tool → CLI** workflow.
+
+```text
+Category
+   ↓
+Tool
+   ↓
+Configure
+   ↓
+Run
+   ↓
+Results
+   ↓
+Export
+```
+
+Example:
+
+```text
 /help
 set target https://example.com
 run
-~~~
+```
 
-## Main Categories
+Export results whenever you need:
 
-| Category | Description |
-|---|---|
-| Vulnerability | Ports, DDoS resilience, subdomains, technology stacks, CVEs, headers, cookies, SSL/TLS, secrets, and more. |
-| DNS | DNS records, SPF, DMARC, DNSSEC, reverse DNS, ASN, and certificate clues. |
-| Web Security | Website information, uptime, redirects, and public-page extraction. |
-| Social | Sherlock-style username searches across public platforms. |
-| Email | Email-domain security and header analysis. |
-| IP Intelligence | IP resolution, reverse DNS, and network context. |
-| Cloud | Storage, CDN, origin, and cloud-service reviews. |
-| People | Organization of public profiles and public links. |
-| News | Article research, source comparison, and timelines. |
-| Business | Company profiles, brands, and product research. |
-| Geospatial | Coordinate validation and public place research. |
-| Images | Local metadata, hashes, metadata-cleaning guidance, and OCR planning. |
-| Documents | Local metadata, text extraction, and file inventory. |
-| Monitoring | Uptime, certificate expiry, and exposure comparisons. |
-| Breaches | Breach-source guidance and authorized local password-policy analysis. |
-| Temporary Mail | Disposable mailbox utility. |
-
-## Important Tools
-
-### Username Checker
-
-The username checker searches public profile URLs across approximately 30 platforms.
-
-~~~text
-/help
-set username itskingkad
-run
-~~~
-
-Possible results include:
-
-~~~text
-[+] Possible profile found
-[-] Not found
-[!] Blocked, rate-limited, timed out, or uncertain
-~~~
-
-A possible match is only a lead. It does not prove that every account belongs to the same person.
-
-### DDoS Resilience Assessment
-
-The DDoS resilience assessment does **not** perform a DDoS attack. It makes a safe, limited HTTP inspection and looks for indicators such as:
-
-- CDN or WAF protection.
-- Rate limiting.
-- Caching.
-- HSTS.
-- Origin-shielding indicators.
-- Large responses.
-- Possible protection gaps.
-
-~~~text
-/help
-set target https://yourwebsite.com
-run
-~~~
-
-The tool explains which protections appear effective and what should be configured or verified manually.
-
-### Security Headers
-
-The security-header tool checks browser protection headers, including:
-
-- `Content-Security-Policy`
-- `Strict-Transport-Security`
-- `X-Frame-Options`
-- `Referrer-Policy`
-- `Permissions-Policy`
-- `X-Content-Type-Options`
-
-~~~text
-set target https://example.com
-run
-~~~
-
-### CVE Matching
-
-CVE stands for **Common Vulnerabilities and Exposures**. CVEs are public records describing known software vulnerabilities.
-
-The CVE tool helps identify which updates may deserve attention. A match is not automatically proof that a system is exploitable.
-
-### DNS and Email Checks
-
-DNS and email checks help explain how a domain is configured.
-
-~~~text
-set target example.com
-run
-~~~
-
-These checks can review:
-
-- A records.
-- AAAA records.
-- MX records.
-- SPF.
-- DMARC.
-- DNSSEC.
-- Nameservers.
-- Reverse DNS.
-
-## Common Commands
-
-~~~text
-help
-set target https://example.com
-set username itskingkad
-run
-clear
-back
+```text
 export json
 export csv
 export md
-~~~
+```
 
-Generated reports are saved in:
+Reports are stored in:
 
-~~~text
+```text
 outputs/
-~~~
+```
 
-## Status Colors
+---
 
-| Indicator | Meaning |
-|---|---|
-| `[+]` Green | Positive result, item found, or protection observed. |
-| `[-]` Red | Negative result or possible issue. |
-| `[!]` Yellow | Warning, uncertainty, blocked request, or unverified result. |
+## 🧩 Example Tools
 
-## Settings
+### Username Research
 
-The Settings screen supports optional API keys for providers such as:
+```text
+/help
+set username example_user
+run
+```
 
-- Shodan.
-- Have I Been Pwned.
-- GitHub.
-- Search providers.
-- Geocoding providers.
-- NVD/CVE data providers.
+Returns possible public profile matches.
 
-Keys are masked and stored locally. Tools that require a provider should identify that requirement instead of generating unsupported results.
+> Results are **leads**, not proof of identity.
 
-## Current Limitations
+### Security Headers
 
-Scylla intentionally does not:
+```text
+set target https://example.com
+run
+```
 
-- Perform DDoS attacks or flooding.
-- Exploit vulnerabilities.
-- Test passwords against accounts.
-- Bypass CAPTCHAs or rate limits.
-- Access private profiles.
-- Track people in real time.
-- Prove that two public accounts belong to the same person.
+Checks headers such as:
 
-Some advanced tools currently provide safe local analysis or explain which optional provider is required.
+```text
+Content-Security-Policy
+Strict-Transport-Security
+X-Frame-Options
+Referrer-Policy
+Permissions-Policy
+```
 
-## Responsible Use
+### DNS Research
 
-Only use Scylla for lawful and authorized research.
+```text
+set target example.com
+run
+```
 
-You should only inspect:
+Can inspect:
 
-- Public information.
-- Websites and systems you own.
-- Websites and systems for which you have explicit authorization to test.
-- Local files and data you are permitted to analyze.
+```text
+A / AAAA
+MX
+SPF
+DMARC
+DNSSEC
+Nameservers
+Reverse DNS
+```
 
-Do not use Scylla to harass, stalk, target, or gain unauthorized access to individuals, organizations, accounts, or systems.
+---
 
-## Interpreting Results
+## 🏗️ Project Structure
 
-Scylla results should be treated as research leads and configuration guidance, not absolute proof.
+```text
+VeltCLI/
+├── core/          # Core application logic
+├── plugins/       # VeltCLI tools & modules
+├── ui/            # Terminal interface
+├── docs/          # Documentation & assets
+├── main.py        # Entry point
+├── config.py      # Configuration
+├── requirements.txt
+└── outputs/       # Generated reports
+```
 
-A result may be affected by:
+---
 
-- Rate limiting.
-- Blocked requests.
-- Network errors.
-- Missing API keys.
-- Incomplete public information.
-- False positives.
-- Service changes.
-- Unavailable providers.
+## 🔌 API Providers
 
-Always verify important findings manually and use multiple reliable sources when appropriate.
+VeltCLI can optionally integrate with external providers such as:
 
-## Repository
+* Shodan
+* Have I Been Pwned
+* GitHub
+* Search providers
+* Geocoding providers
+* NVD / CVE providers
 
-[![GitHub Repository](https://img.shields.io/badge/GitHub-vkxd%2FScyll-181717?style=for-the-badge&logo=github)](https://github.com/vkxd/Scyll)
+API keys are stored locally and masked in the interface.
 
-[Visit the Scylla repository](https://github.com/vkxd/Scyll)
+---
+
+## 🛡️ Safety
+
+VeltCLI is designed for **lawful OSINT and defensive security research**.
+
+It does **not**:
+
+* ❌ Perform DDoS attacks
+* ❌ Exploit vulnerabilities
+* ❌ Test passwords against accounts
+* ❌ Bypass CAPTCHAs or rate limits
+* ❌ Access private profiles
+* ❌ Track people in real time
+* ❌ Claim public accounts belong to the same person
+
+Use VeltCLI only against systems, data, and services you're authorized to research.
+
+---
+
+## ⚠️ Results ≠ Proof
+
+VeltCLI produces **research leads and configuration guidance**.
+
+Results can be affected by:
+
+* Rate limits
+* Blocked requests
+* Missing API keys
+* Network failures
+* Incomplete public data
+* False positives
+* Provider changes
+
+**Verify important findings manually.**
+
+---
+
+## 🗺️ Roadmap
+
+* [x] Modular CLI architecture
+* [x] Category-based interface
+* [x] Export system
+* [x] DNS research
+* [x] Web security checks
+* [x] Username research
+* [ ] More plugins
+* [ ] Improved reporting
+* [ ] Plugin marketplace
+* [ ] Better configuration system
+* [ ] Expanded provider support
+
+---
+
+## 📜 License
+
+VeltCLI is released under the **MIT License**.
+
+---
+
+<div align="center">
+
+### ⚡ VeltCLI
+
+**OSINT • Security Research • Reconnaissance**
+
+Built by **[@vkxd](https://github.com/vkxd)**
+
+⭐ Star the repo if you find it useful.
+
+</div>
