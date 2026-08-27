@@ -41,6 +41,7 @@ class GeneralOSINT(BasePlugin):
             "place_search": self.place_search,
             "network_range": self.provider_placeholder,
             "whois_lookup": self.whois_lookup,
+            "website_copy": self.provider_placeholder,
             "subdomain_enum": self.subdomain_enum,
             "tech_detect": self.tech_detect,
             "certificate_history": self.certificate_history,
@@ -247,27 +248,93 @@ class GeneralOSINT(BasePlugin):
         return f"[>] Place research target: {target}\n[!] Configure an optional geocoding provider for live place results.\n[+] You can still use coordinate-info with supplied latitude/longitude."
 
     async def whois_lookup(self, target):
-        domain = target.strip().lower()
-        domain = re.sub(r"^https?://", "", domain).split("/", 1)[0].split(":", 1)[0]
-        domain = domain.removeprefix("www.")
-        url = f"https://rdap.org/domain/{domain}"
+        domain = self._normalize_domain(target)
+        if not domain or "." not in domain:
+            return "[!] Enter a domain such as example.com; URLs and paths are accepted too."
+
+        candidates = [domain]
+        parent = self._registrable_parent(domain)
+        if parent and parent != domain:
+            candidates.append(parent)
+
+        errors = []
+        for candidate in candidates:
+            result = await self._rdap_domain(candidate)
+            if result[0]:
+                lines = result[1]
+                if candidate != domain:
+                    lines.insert(1, f"[!] {domain} is a hosted subdomain; registration data is shown for parent domain {candidate}.")
+                return "\n".join(lines)
+            errors.append(f"{candidate}: {result[1]}")
+
+        # Last resort: provide a stable public lookup URL rather than scraping
+        # an HTML page whose layout can change and whose data may be stale.
+        return "\n".join([
+            f"[!] No registration record could be retrieved for {domain}.",
+            "[>] Public web lookup fallback:",
+            f"[+] https://www.whois.com/whois/{parent or domain}",
+            f"[+] https://lookup.icann.org/en/lookup/{parent or domain}",
+            "[!] Hosted subdomains usually do not have their own WHOIS record; check the parent domain.",
+        ])
+
+    async def _rdap_domain(self, domain):
+        urls = [f"https://rdap.org/domain/{domain}"]
         try:
-            response = await self.client.get(url, headers={"Accept": "application/rdap+json"}, timeout=20)
-            if response.status_code != 200:
-                return f"[!] RDAP did not return registration data for {domain} (HTTP {response.status_code})."
-            data = response.json()
-            lines = [f"[>] Public WHOIS/RDAP lookup for {domain}", f"[+] Handle: {data.get('handle', 'not published')}", f"[+] Status: {', '.join(data.get('status', [])) or 'not published'}"]
-            for event in data.get("events", []):
-                if event.get("eventAction") in {"registration", "expiration", "last changed"}:
-                    lines.append(f"[+] {event['eventAction'].title()}: {event.get('eventDate', 'not published')}")
-            nameservers = [item.get("ldhName") for item in data.get("nameservers", []) if item.get("ldhName")]
-            lines.append(f"[+] Nameservers: {', '.join(nameservers[:8]) or 'not published'}")
-            lines.append("[!] Privacy services and registry limits may hide registrant details.")
-            return "\\n".join(lines)
-        except Exception as error:
-            if type(error).__name__ == "ReadTimeout":
-                return "[!] RDAP lookup timed out. The registry may be slow or unavailable; try again later or use the bare domain."
-            return f"[!] RDAP lookup failed: {type(error).__name__}"
+            bootstrap = await self.client.get("https://data.iana.org/rdap/dns.json", timeout=8)
+            if bootstrap.status_code == 200:
+                suffix = "." + domain.rsplit(".", 1)[-1]
+                for service, registries in bootstrap.json().get("services", []):
+                    if suffix in registries:
+                        urls.extend(service)
+                        break
+        except Exception:
+            pass
+        last = "no registry response"
+        for url in dict.fromkeys(urls):
+            try:
+                response = await self.client.get(url, headers={"Accept": "application/rdap+json, application/json"}, timeout=12)
+                last = f"HTTP {response.status_code}"
+                if response.status_code != 200:
+                    continue
+                data = response.json()
+                lines = [
+                    f"[>] Public WHOIS/RDAP lookup for {domain}",
+                    f"[+] Handle: {data.get('handle', 'not published')}",
+                    f"[+] Status: {', '.join(data.get('status', [])) or 'not published'}",
+                ]
+                for event in data.get("events", []):
+                    if event.get("eventAction") in {"registration", "expiration", "last changed"}:
+                        lines.append(f"[+] {event['eventAction'].title()}: {event.get('eventDate', 'not published')}")
+                nameservers = [item.get("ldhName") for item in data.get("nameservers", []) if item.get("ldhName")]
+                lines.extend([
+                    f"[+] Nameservers: {', '.join(nameservers[:8]) or 'not published'}",
+                    "[!] Privacy services and registry limits may hide registrant details.",
+                ])
+                return True, lines
+            except Exception as error:
+                if type(error).__name__ != "ReadTimeout":
+                    last = type(error).__name__
+        return False, last
+
+    @staticmethod
+    def _registrable_parent(domain):
+        labels = [label for label in domain.split(".") if label]
+        # This dependency-free approximation handles normal domains and common
+        # multi-label public suffixes. The exact registry response remains the
+        # authority, so the fallback is always clearly labeled.
+        if len(labels) <= 2:
+            return domain
+        if len(labels[-1]) == 2 and labels[-2] in {"co", "com", "net", "org", "gov", "ac"}:
+            return ".".join(labels[-3:])
+        return ".".join(labels[-2:])
+
+    @staticmethod
+    def _normalize_domain(target):
+        value = (target or "").strip().lower()
+        value = re.sub(r"^https?://", "", value)
+        value = value.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+        value = value.split(":", 1)[0].strip().rstrip(".")
+        return value.removeprefix("www.")
 
     async def subdomain_enum(self, target):
         domain = target.strip().lower().replace("https://", "").replace("http://", "").split("/", 1)[0].lstrip("*.")

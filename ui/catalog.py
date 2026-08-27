@@ -30,7 +30,7 @@ def t(key, name, description, module_id, fields, what, why, limitations="Results
 TARGET = [("target", "Target", "example.com")]
 URL = [("target", "Website URL", "https://example.com")]
 FILE = [("target", "Local file or folder", "./file.txt")]
-USERNAME = [("username", "Username", "itskingkad")]
+USERNAME = [("username", "Username", "itskingkad"), ("method", "Search method", "maigret or sherlock")]
 
 CATEGORIES = [
     CategorySpec("vulnerability", "VULNERABILITY", "Authorized website and infrastructure security review.", [
@@ -62,6 +62,7 @@ CATEGORIES = [
         t("asn-map", "ASN Map", "Explain network ownership lookup.", "asn_map", TARGET, "Prepares an organization or IP for an optional ASN provider.", "ASN context shows which organization operates a network."),
     ]),
     CategorySpec("web", "WEB SECURITY", "Website, hosting, and public web research.", [
+        t("website-copy", "Website Copier", "Archive an authorized public website locally.", "website_copy", URL, "Captures rendered public pages and network assets into the local outputs folder.", "It helps owners create a local backup or review how their public site renders.", "Only copy sites you own or are authorized to archive; forms, logins, server code, and databases are not copied.", "medium"),
         t("whois-lookup", "WHOIS Lookup", "Review public domain registration records.", "whois_lookup", TARGET, "Reads public WHOIS/RDAP registration details when available.", "Registration dates, registrar, and nameservers help establish domain context.", "Privacy services and registry policies may hide registrant details."),
         t("subdomain-enum", "Certificate Subdomains", "Enumerate names from certificate-transparency logs.", "subdomain_enum", TARGET, "Queries public crt.sh certificate logs for names associated with a domain.", "It helps owners discover forgotten public hostnames without probing private systems.", "Certificate logs are passive and may contain expired or unrelated names.", "medium"),
         t("tech-detect", "Technology Detection", "Detect public web technology signals.", "tech_detect", URL, "Inspects public headers, HTML markers, and common framework clues.", "Technology awareness helps owners patch and harden the right components.", "Results are clues, not definitive version identification."),
@@ -73,7 +74,7 @@ CATEGORIES = [
         t("article-summary", "Article Summary", "Extract a preview from a public URL.", "article_summary", URL, "Extracts a short text preview from a public page.", "It helps organize research while separating extraction from fact verification."),
     ]),
     CategorySpec("social", "SOCIAL", "Public username and profile research.", [
-        t("username-checker", "Sherlock-Style Username Search", "Check a large public platform catalog.", "sub_sherlock", USERNAME, "Searches public profile URLs with found, not-found, blocked, and unknown states.", "It shows where a public alias may be reused; results do not prove profiles belong to one person.", "Platforms may block automated checks or change their pages.", "medium"),
+        t("username-checker", "Username Search", "Choose Maigret or Sherlock for public profile discovery.", "sub_sherlock", USERNAME, "Runs the selected public username search engine and shows confirmed profile URLs.", "Different engines have different databases and detection behavior, so comparing them can improve coverage.", "Results are public-page matches, not proof of identity; never enter passwords.", "medium"),
         t("alias-search", "Alias Search", "Search a public alias across platforms.", "alias_search", USERNAME, "Runs the same conservative public alias search.", "It helps organize a public online presence review.", risk="medium"),
     ]),
     CategorySpec("email", "EMAIL", "Email-domain security and header research.", [

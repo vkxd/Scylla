@@ -14,7 +14,7 @@ from ui.catalog import CATEGORIES, CategorySpec, ToolSpec
 ENGINE_CATEGORIES = {
     "vulnerability": "vuln",
     "dns": "infra",
-    "web": "infra",
+    "web": "web_copy",
     "social": "social",
     "email": "general",
     "ip": "general",
@@ -28,6 +28,7 @@ ENGINE_CATEGORIES = {
     "monitoring": "general",
     "breaches": "breach",
     "temps": "temp",
+    "web_copy": "web_copy",
 }
 
 
@@ -229,6 +230,8 @@ class ToolCli(Screen):
     def _start_animation(self) -> None:
         self._stop_animation()
         self._animation_index = 0
+        self.output_lines.append("[>] Working.")
+        self._render_log()
         self._animation_timer = self.set_interval(0.35, self._animate)
 
     def _stop_animation(self) -> None:
@@ -327,6 +330,7 @@ class ToolCli(Screen):
         self.output_lines.extend([
             "",
             "  run                   Execute the selected tool",
+            "  username search: set method maigret|sherlock",
             "  run provider          Create a new inbox (tempmail)",
             "  run check             Check an existing inbox (tempmail)",
             "  list                  List available providers",
@@ -385,11 +389,12 @@ class ToolCli(Screen):
         self.status = "RUNNING"
         self._update_status()
         self.output_lines.append(f"[>] Executing {self.tool.name}...")
+
         self._render_log()
         self._start_animation()
         target = next((self.values[name] for name, _, _ in self.tool.fields), "")
         try:
-            result = await self.engine.run_module(ENGINE_CATEGORIES[self.category.key], self.tool.module_id, target)
+            result = await self.engine.run_module(ENGINE_CATEGORIES[self.category.key], self.tool.module_id, target, self.values)
             self.output_lines.extend(str(result).splitlines())
         except Exception as error:
             self.output_lines.append(f"[-] Tool failed: {type(error).__name__}: {error}")

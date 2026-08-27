@@ -1,114 +1,119 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
-from typing import Optional
+import json
+import os
+import sys
+from pathlib import Path
 
 from .base import BasePlugin
 
 
-@dataclass(frozen=True)
-class SiteSpec:
-    name: str
-    url: str
-    not_found: tuple[str, ...] = ()
-    blocked_statuses: tuple[int, ...] = (403, 429)
-    positive_statuses: tuple[int, ...] = (200,)
-
-
 class SocialIntel(BasePlugin):
-    """Sherlock-style public profile checks with conservative false-positive handling."""
-
-    SITES = (
-        SiteSpec("GitHub", "https://github.com/{username}"),
-        SiteSpec("GitLab", "https://gitlab.com/{username}"),
-        SiteSpec("Reddit", "https://www.reddit.com/user/{username}"),
-        SiteSpec("X / Twitter", "https://x.com/{username}"),
-        SiteSpec("Instagram", "https://www.instagram.com/{username}/"),
-        SiteSpec("Facebook", "https://www.facebook.com/{username}"),
-        SiteSpec("Twitch", "https://www.twitch.tv/{username}"),
-        SiteSpec("YouTube", "https://www.youtube.com/@{username}"),
-        SiteSpec("TikTok", "https://www.tiktok.com/@{username}"),
-        SiteSpec("Pinterest", "https://www.pinterest.com/{username}/"),
-        SiteSpec("Medium", "https://medium.com/@{username}"),
-        SiteSpec("Dev.to", "https://dev.to/{username}"),
-        SiteSpec("Keybase", "https://keybase.io/{username}"),
-        SiteSpec("Hacker News", "https://news.ycombinator.com/user?id={username}"),
-        SiteSpec("Steam", "https://steamcommunity.com/id/{username}"),
-        SiteSpec("Codeberg", "https://codeberg.org/{username}"),
-        SiteSpec("Docker Hub", "https://hub.docker.com/u/{username}"),
-        SiteSpec("PyPI", "https://pypi.org/user/{username}/"),
-        SiteSpec("NPM", "https://www.npmjs.com/~{username}"),
-        SiteSpec("Kaggle", "https://www.kaggle.com/{username}"),
-        SiteSpec("Mastodon", "https://mastodon.social/@{username}"),
-        SiteSpec("About.me", "https://about.me/{username}"),
-        SiteSpec("Bandcamp", "https://{username}.bandcamp.com"),
-        SiteSpec("Last.fm", "https://www.last.fm/user/{username}"),
-        SiteSpec("SoundCloud", "https://soundcloud.com/{username}"),
-        SiteSpec("Lichess", "https://lichess.org/@/{username}"),
-        SiteSpec("Chess.com", "https://www.chess.com/member/{username}"),
-        SiteSpec("Patreon", "https://www.patreon.com/{username}"),
-        SiteSpec("Behance", "https://www.behance.net/{username}"),
-        SiteSpec("Dribbble", "https://dribbble.com/{username}"),
-    )
+    """Public username discovery using user-selected Maigret or Sherlock."""
 
     async def run_all(self, target):
-        return await self.sherlock_clone(target)
+        return await self.search(target)
 
     async def run_sub(self, sub_id, target):
-        if sub_id in {"sub_sherlock", "alias_search"}:
-            return await self.sherlock_clone(target)
+        if sub_id in {"sub_sherlock", "alias_search", "maigret", "username_search"}:
+            return await self.search(target)
         return "[!] Social tool is not registered."
 
-    async def sherlock_clone(self, username):
-        username = username.strip().lstrip("@").split()[0] if username.strip() else ""
-        if not username or len(username) > 64:
-            return "[!] Provide one public username, without a password or private account information."
-        results = [
-            f"[>] Sherlock-style public username scan for: {username}",
-            f"[>] Checking {len(self.SITES)} public platforms with bounded concurrency...",
-            "[!] Found means the public page matched; it is not proof that all profiles belong to one person.",
-        ]
-        semaphore = asyncio.Semaphore(6)
+    async def search(self, target):
+        values = getattr(self, "values", {}) or {}
+        username = (values.get("username") or target or "").strip().lstrip("@").split()[0]
+        method = (values.get("method") or "maigret").strip().lower()
+        if not username or len(username) > 64 or any(char in username for char in "\\/\"'`;&|"):
+            return "[!] Provide one public username only; never enter a password."
+        if method in {"maigret", "m"}:
+            return await self._run_maigret(username)
+        if method in {"sherlock", "s"}:
+            return await self._run_sherlock(username)
+        return "[!] Unknown method. Use: maigret or sherlock."
 
-        async def check(site: SiteSpec) -> str:
-            url = site.url.format(username=username)
-            async with semaphore:
-                for attempt in range(2):
-                    try:
-                        response = await self.client.get(
-                            url,
-                            follow_redirects=True,
-                            headers={"User-Agent": "Scylla-Public-Profile-Check/1.0"},
-                        )
-                        final_url = str(response.url).lower()
-                        body = response.text[:10000].lower()
-                        if response.status_code in site.blocked_statuses:
-                            return f"[!] {site.name}: Blocked or rate limited ({response.status_code}) ({url})"
-                        if response.status_code in site.positive_statuses:
-                            title_missing = "page not found" in body or "doesn't exist" in body or "not found" in body
-                            redirected_away = site.name not in {"X / Twitter", "Facebook"} and username.lower() not in final_url and site.name not in {"YouTube"}
-                            if title_missing or redirected_away:
-                                return f"[-] {site.name}: Not Found ({url})"
-                            return f"[+] {site.name}: Found ({url})"
-                        if response.status_code == 404:
-                            return f"[-] {site.name}: Not Found ({url})"
-                        return f"[!] {site.name}: Could not verify (HTTP {response.status_code}) ({url})"
-                    except (asyncio.TimeoutError, TimeoutError):
-                        if attempt == 0:
-                            await asyncio.sleep(0.25)
-                            continue
-                        return f"[!] {site.name}: Timeout ({url})"
-                    except Exception as error:
-                        return f"[!] {site.name}: Error ({type(error).__name__}) ({url})"
-            return f"[!] {site.name}: Could not verify ({url})"
+    async def _run_maigret(self, username):
+        output_dir = Path(os.environ.get("VELT_OUTPUT_DIR", "outputs")) / "username_checks" / "maigret"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        command = [sys.executable, "-m", "maigret", username, "--json", "ndjson", "--folderoutput", str(output_dir), "--no-progressbar"]
+        completed = await self._invoke(command)
+        if completed is None:
+            return "[!] Maigret timed out."
+        report_files = sorted(output_dir.glob("*.json"), key=lambda path: path.stat().st_mtime, reverse=True)
+        found, unknown = self._parse_reports(report_files)
+        if completed.returncode != 0 and not report_files:
+            return self._process_error("Maigret", completed)
+        return self._format_report("Maigret", username, found, unknown, output_dir)
 
-        checks = await asyncio.gather(*(check(site) for site in self.SITES))
-        results.extend(checks)
-        found = sum(result.startswith("[+]") for result in checks)
-        blocked = sum(result.startswith("[!]") for result in checks)
-        results.extend([
-            f"[+] Scan complete. Found {found}/{len(self.SITES)} possible public profiles.",
-            f"[!] {blocked} platforms need manual confirmation because they blocked, timed out, or could not be verified.",
-        ])
-        return "\n".join(results)
+    async def _run_sherlock(self, username):
+        output_dir = Path(os.environ.get("VELT_OUTPUT_DIR", "outputs")) / "username_checks" / "sherlock"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report_path = output_dir / f"{username}.txt"
+        command = [sys.executable, "-m", "sherlock_project", username, "--output", str(report_path), "--print-found", "--no-color"]
+        completed = await self._invoke(command)
+        if completed is None:
+            return "[!] Sherlock timed out."
+        if completed.returncode != 0 and not report_path.exists():
+            # Some installs expose Sherlock as `sherlock` rather than the module
+            # name used by sherlock-project.
+            completed = await self._invoke(["sherlock", username, "--output", str(report_path), "--print-found", "--no-color"])
+        if completed is None:
+            return "[!] Sherlock timed out."
+        if completed.returncode != 0 and not report_path.exists():
+            return self._process_error("Sherlock", completed, "pip install sherlock-project")
+        urls = []
+        if report_path.exists():
+            urls = [line.strip() for line in report_path.read_text(encoding="utf-8", errors="replace").splitlines() if line.strip().startswith(("http://", "https://"))]
+        if not urls:
+            urls = [line.strip() for line in (completed.stdout or "").splitlines() if line.strip().startswith(("http://", "https://"))]
+        return self._format_report("Sherlock", username, [("Public profile", url) for url in sorted(set(urls))], 0, output_dir)
+
+    async def _invoke(self, command):
+        def invoke():
+            import subprocess
+            env = os.environ.copy()
+            env.update({"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"})
+            return subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=900)
+        try:
+            return await asyncio.to_thread(invoke)
+        except Exception as error:
+            if type(error).__name__ == "TimeoutExpired":
+                return None
+            raise
+
+    @staticmethod
+    def _parse_reports(report_files):
+        found = []
+        unknown = 0
+        for report in report_files:
+            try:
+                data = json.loads(report.read_text(encoding="utf-8"))
+                items = data.get("sites", data) if isinstance(data, dict) else data
+                if isinstance(items, dict):
+                    items = items.values()
+                for item in items or []:
+                    if not isinstance(item, dict):
+                        continue
+                    status = str(item.get("status", item.get("status_code", ""))).lower()
+                    url = item.get("url_user") or item.get("url") or item.get("link")
+                    if url and any(marker in status for marker in ("found", "claimed", "true", "available")):
+                        found.append((item.get("site") or item.get("name") or "Public profile", url))
+                    elif any(marker in status for marker in ("unknown", "error", "timeout", "blocked")):
+                        unknown += 1
+            except (OSError, json.JSONDecodeError):
+                continue
+        return sorted(set(found)), unknown
+
+    @staticmethod
+    def _format_report(method, username, found, unknown, output_dir):
+        lines = [f"[>] {method} public username search: {username}", "[!] Results are public-page matches, not proof of identity or account ownership.", f"[>] Full report folder: {output_dir}"]
+        lines.extend(f"[+] {site}: {url}" for site, url in found)
+        if not found:
+            lines.append(f"[-] No public profiles were confirmed by {method}.")
+        lines.extend([f"[+] Confirmed public profiles: {len(found)}", f"[!] Unverified/blocked checks: {unknown}"])
+        return "\n".join(lines)
+
+    @staticmethod
+    def _process_error(name, completed, install="pip install maigret"):
+        details = (completed.stderr or completed.stdout or "No output returned.").strip()
+        return "\n".join([f"[!] {name} did not complete.", details[-3000:], f"[>] Install or verify it with: {install}"])

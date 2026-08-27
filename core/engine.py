@@ -8,6 +8,7 @@ from plugins.infra import InfraDNS
 from plugins.social import SocialIntel
 from plugins.temp_mail import TempMail
 from plugins.vuln_finder import VulnFinder
+from plugins.web_copy import WebsiteCopier
 
 
 class ScyllaEngine:
@@ -22,14 +23,14 @@ class ScyllaEngine:
             "general": GeneralOSINT(self.client),
             "breach": BreachDB(self.client),
             "temp": TempMail(self.client),
+            "web_copy": WebsiteCopier(self.client),
         }
 
     async def run_module(self, category, module_id, target, values=None):
         try:
             module = self.modules[category]
             # Pass values to modules that need them (like tempmail)
-            if values:
-                module.values = values
+            module.values = values or {}
             if module_id == "run_all":
                 return await module.run_all(target)
             result = await module.run_sub(module_id, target)

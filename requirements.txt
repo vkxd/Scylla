@@ -7,3 +7,4 @@ shodan==1.31.0
 beautifulsoup4==4.12.3
 selenium==4.25.0
 webdriver-manager==4.0.2
+maigret==0.5.0
