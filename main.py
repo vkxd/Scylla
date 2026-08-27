@@ -4,7 +4,7 @@ from core.engine import ScyllaEngine
 from ui.workflow import MainMenu
 
 
-class ScyllaApp(App):
+class VeltApp(App):
     CSS_PATH = "ui/scylla.tcss"
     BINDINGS = [("q", "quit", "Quit"), ("escape", "app.pop_screen", "Back")]
 
@@ -20,4 +20,4 @@ class ScyllaApp(App):
 
 
 if __name__ == "__main__":
-    ScyllaApp().run()
+    VeltApp().run()

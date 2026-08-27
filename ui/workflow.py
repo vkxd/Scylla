@@ -78,13 +78,11 @@ class MainMenu(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static(
-            " ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄   ▄▄ ▄▄▄     ▄▄▄     ▄▄▄▄▄▄ \n"
-            "█       █       █  █ █  █   █   █   █   █      █\n"
-            "█  ▄▄▄▄▄█       █  █▄█  █   █   █   █   █  ▄   █\n"
-            "█ █▄▄▄▄▄█     ▄▄█       █   █   █   █   █ █▄█  █\n"
-            "█▄▄▄▄▄  █    █  █▄     ▄█   █▄▄▄█   █▄▄▄█      █\n"
-            " ▄▄▄▄▄█ █    █▄▄  █   █ █       █       █  ▄   █\n"
-            "█▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█ █▄▄▄█ █▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█▄█ █▄▄█",
+            "██    ██ ███████ ██      ████████ \n"
+            "██    ██ ██      ██         ██    \n"
+            "██    ██ █████   ██         ██    \n"
+            " ██  ██  ██      ██         ██    \n"
+            "  ████   ███████ ███████    ██    ",
             id="brand-art",
         )
         yield Static('✦ ALL IN 1 OSINT TOOL ✦  |  run "help" in any tool to see what it actually does', id="brand-subtitle")
@@ -155,7 +153,7 @@ class ToolMenu(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static(f"SCYLLA / {self.category.key}", classes="screen-title")
+        yield Static(f"VELT / {self.category.key}", classes="screen-title")
         yield Static(self.category.description, classes="muted")
         with VerticalScroll(id="tool-screen"):
             yield Static("SELECT A TOOL", classes="panel-title")
@@ -198,7 +196,7 @@ class ToolCli(Screen):
         with Vertical(id="cli-layout"):
             yield RichLog(id="tool-log", highlight=True, markup=False, wrap=True)
             with Horizontal(id="tool-command-row"):
-                yield Static(f"scylla ({self.category.key}/{self.tool.key})>", id="tool-prompt-label")
+                yield Static(f"velt ({self.category.key}/{self.tool.key})>", id="tool-prompt-label")
                 yield Input(placeholder=self._placeholder(), id="tool-command-input")
         yield Button("BACK TO TOOLS", id="back-tools", classes="secondary-button")
         yield Footer()
@@ -252,7 +250,7 @@ class ToolCli(Screen):
     async def execute_command(self, command: str) -> None:
         parts = command.split()
         action = parts[0].lower().removeprefix("/") if parts else ""
-        self.output_lines.append(f"scylla ({self.category.key}/{self.tool.key})> {command}")
+        self.output_lines.append(f"velt ({self.category.key}/{self.tool.key})> {command}")
         if action == "help":
             self._write_help()
         elif action == "list":
@@ -410,7 +408,7 @@ class SettingsScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static("SCYLLA / SETTINGS", classes="screen-title")
+        yield Static("VELT / SETTINGS", classes="screen-title")
         yield Static("Enter your own optional provider keys. Values are saved locally and displayed masked.", classes="muted")
         with VerticalScroll(id="settings-screen"):
             for provider in PROVIDER_ENV:
