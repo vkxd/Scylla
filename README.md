@@ -28,7 +28,8 @@
 <!-- Replace this with a real screenshot/GIF -->
 
 <p align="center">
-  <img src="docs/preview.png" alt="VeltCLI Preview" width="850">
+  <img width="1879" height="948" alt="image" src="https://github.com/user-attachments/assets/b30c6c74-8f23-46a5-8f6f-e85358fdcc03" />
+
 </p>
 
 ---
