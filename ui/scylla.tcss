@@ -202,6 +202,28 @@ Footer {
     color: #f5f7fa;
 }
 
+#intelligence-layout {
+    height: 1fr;
+    margin: 1 2;
+}
+
+#intelligence-log {
+    height: 1fr;
+    min-height: 8;
+    border: solid #2c3946;
+    background: #080c11;
+    padding: 1;
+}
+
+#intelligence-input {
+    width: 1fr;
+    height: 3;
+    margin-top: 1;
+    border: solid #ff4f7b;
+    background: #151d26;
+    color: #f5f7fa;
+}
+
 #back-categories,
 #back-tools {
     width: auto;

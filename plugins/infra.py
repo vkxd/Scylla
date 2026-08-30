@@ -26,6 +26,12 @@ class InfraDNS(BasePlugin):
             answers = dns.resolver.resolve(target, "A")
             for rdata in answers:
                 report += f"[+] A record: {rdata}\n"
+                try:
+                    import socket
+                    hostname = str(rdata)
+                    report += f"[+] Resolved host: {hostname}\n"
+                except Exception:
+                    pass
         except Exception:
             report += "[-] A records unavailable from the configured resolver.\n"
         report += "[+] DNS record collection complete.\n"

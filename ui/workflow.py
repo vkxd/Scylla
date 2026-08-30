@@ -9,6 +9,7 @@ from textual.widgets import Button, Footer, Header, Input, RichLog, Static
 
 from config import PROVIDER_ENV
 from ui.catalog import CATEGORIES, CategorySpec, ToolSpec
+from core.services.findings import SEVERITIES
 
 
 ENGINE_CATEGORIES = {
@@ -98,6 +99,11 @@ class MainMenu(Screen):
                             id=f"category-{category.key}",
                             classes="category-card",
                         )
+                yield Button("◈ DASHBOARD", id="dashboard", classes="secondary-button")
+                yield Button("◇ GRAPH", id="graph", classes="secondary-button")
+                yield Button("▣ EVIDENCE", id="evidence", classes="secondary-button")
+                yield Button("⌁ ACTIVITY", id="activity", classes="secondary-button")
+                yield Button("✓ DOCTOR", id="doctor", classes="secondary-button")
                 yield Button("⚙ SETTINGS", id="settings", classes="secondary-button")
             with Vertical(id="tool-directory"):
                 yield Static("SELECT A CATEGORY", classes="screen-title", id="directory-title")
@@ -141,6 +147,16 @@ class MainMenu(Screen):
             self._show_category(button_id.removeprefix("category-"))
         elif button_id == "settings":
             self.app.push_screen(SettingsScreen(self.engine))
+        elif button_id == "dashboard":
+            self.app.push_screen(IntelligenceScreen(self.engine, "dashboard"))
+        elif button_id == "graph":
+            self.app.push_screen(IntelligenceScreen(self.engine, "graph"))
+        elif button_id == "evidence":
+            self.app.push_screen(IntelligenceScreen(self.engine, "evidence"))
+        elif button_id == "activity":
+            self.app.push_screen(IntelligenceScreen(self.engine, "activity"))
+        elif button_id == "doctor":
+            self.app.push_screen(IntelligenceScreen(self.engine, "doctor"))
         elif button_id in self._tool_buttons:
             tool = self._tool_buttons[button_id]
             self.app.push_screen(ToolCli(self.engine, find_category(self.selected_category), tool))
@@ -403,6 +419,162 @@ class ToolCli(Screen):
             self.status = "READY"
             self._render_log()
             self._update_status()
+
+
+class IntelligenceScreen(Screen):
+    """Command-like views for persisted intelligence systems."""
+
+    def __init__(self, engine, view="dashboard"):
+        super().__init__()
+        self.engine = engine
+        self.view = view
+        self.output_lines = []
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        yield Static(f"VELT / {self.view.upper()}", classes="screen-title")
+        yield Static(self._help_text(), classes="muted")
+        with Vertical(id="intelligence-layout"):
+            yield RichLog(id="intelligence-log", highlight=True, markup=False, wrap=True)
+            yield Input(placeholder="Type a command, then press Enter", id="intelligence-input")
+            yield Button("BACK", id="back-intelligence", classes="secondary-button")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self._refresh()
+        self.call_after_refresh(self._focus_command)
+
+    def _focus_command(self) -> None:
+        command_input = self.query_one("#intelligence-input", Input)
+        command_input.focus()
+        self.app.set_focus(command_input)
+
+    def _help_text(self):
+        return {
+            "dashboard": "Live local overview. Commands: stats, refresh, back",
+            "findings": "Persisted discoveries. Commands: list [--severity LEVEL], view ID, stats, clear, back",
+            "graph": "Persisted target relationships. Commands: show, target VALUE, export json|graphml, clear, back",
+            "evidence": "Supporting evidence. Commands: list, view ID, export ID, clear, back",
+            "activity": "Local history. Commands: recent, clear, back",
+            "doctor": "Installation diagnostics. Commands: check, back",
+        }.get(self.view, "Type help for commands.")
+
+    def _refresh(self, command=""):
+        if command.strip().lower() == "help":
+            text = self._help_text()
+        elif self.view == "dashboard":
+            text = self.engine.dashboard.render(sum(len(c.tools) for c in CATEGORIES))
+        elif self.view == "findings":
+            text = self._findings(command)
+        elif self.view == "graph":
+            text = self._graph(command)
+        elif self.view == "evidence":
+            text = self._evidence(command)
+        elif self.view == "activity":
+            text = self._activity(command)
+        else:
+            text = self.engine.doctor.render()
+        self.output_lines = text.splitlines()
+        log = self.query_one("#intelligence-log", RichLog)
+        log.clear()
+        for line in self.output_lines:
+            log.write(style_output_line(line))
+
+    def _findings(self, command):
+        parts = command.split()
+        action = parts[0].lower() if parts else "list"
+        if action in {"list", "findings"}:
+            severity = parts[2] if len(parts) > 2 and parts[1].lower() == "--severity" else None
+            items = self.engine.findings.list(severity)
+            if not items:
+                return "No findings have been recorded yet."
+            return "\n".join(f"[{item['severity']}] {item['id']} — {item['title']} | {item['target']}" for item in items)
+        if action == "view" and len(parts) >= 2:
+            item = self.engine.findings.view(parts[1])
+            if not item:
+                return f"✗ Finding not found: {parts[1]}"
+            evidence = [self.engine.evidence.view(eid) for eid in item.get("evidence_ids", [])]
+            evidence = [entry for entry in evidence if entry]
+            lines = [f"Finding: {item['title']}", f"Severity: {item['severity']}", f"Target: {item['target']}", f"Description: {item['description']}", f"Category: {item['category']}", f"Source: {item['source']}", f"Status: {item['status']}", f"Timestamp: {item['timestamp']}"]
+            if evidence:
+                lines.append("Evidence:")
+                for entry in evidence:
+                    lines.extend([f"  {entry['id']} — {entry['summary']}", f"  Target: {entry['target']}", f"  Observed: {entry['observed']}", f"  Timestamp: {entry['timestamp']}", f"  Source: {entry['source']}"])
+            return "\n".join(lines)
+        if action == "stats":
+            stats = self.engine.findings.stats()
+            return "\n".join([f"Total findings: {stats['total']}"] + [f"{key}: {value}" for key, value in stats['by_severity'].items()])
+        if action == "clear":
+            return f"✓ Cleared {self.engine.findings.clear()} findings."
+        return "Usage: list [--severity info|low|medium|high|critical], view ID, stats, clear"
+
+    def _graph(self, command):
+        parts = command.split()
+        action = parts[0].lower() if parts else "show"
+        if action == "help":
+            return "Usage: show, target TARGET, export json|graphml, clear"
+        if action in {"show", "graph"}:
+            return self.engine.graph.text_map()
+        if action == "target" and len(parts) >= 2:
+            return self.engine.graph.text_map(" ".join(parts[1:]))
+        if action == "export" and len(parts) >= 2:
+            kind = parts[1].lower()
+            if kind == "json":
+                import json
+                return json.dumps(self.engine.graph.to_json(), indent=2)
+            if kind == "graphml":
+                return self.engine.graph.to_graphml()
+            return "✗ Export format must be json or graphml."
+        if action == "clear":
+            counts = self.engine.graph.clear()
+            return f"✓ Cleared {counts['nodes']} nodes and {counts['edges']} relationships."
+        return "Usage: show, target TARGET, export json|graphml, clear"
+
+    def _evidence(self, command):
+        parts = command.split()
+        action = parts[0].lower() if parts else "list"
+        if action == "help":
+            return "Usage: list, view ID, export ID, clear"
+        if action in {"list", "evidence"}:
+            items = self.engine.evidence.list()
+            return "No evidence has been collected yet." if not items else "\n".join(f"{item['id']} [{item['kind']}] {item['summary']} — {item['target']}" for item in items)
+        if action == "view" and len(parts) >= 2:
+            item = self.engine.evidence.view(parts[1])
+            return f"✗ Evidence not found: {parts[1]}" if not item else "\n".join(f"{key.replace('_', ' ').title()}: {value}" for key, value in item.items())
+        if action == "export" and len(parts) >= 2:
+            item = self.engine.evidence.export(parts[1])
+            if not item:
+                return f"✗ Evidence not found: {parts[1]}"
+            import json
+            return json.dumps(item, indent=2)
+        if action == "clear":
+            return f"✓ Cleared {self.engine.evidence.clear()} evidence items."
+        return "Usage: list, view ID, export ID, clear"
+
+    def _activity(self, command):
+        parts = command.split()
+        action = parts[0].lower() if parts else "recent"
+        if action == "help":
+            return "Usage: recent, clear"
+        if action in {"recent", "activity"}:
+            events = self.engine.activity.recent(20)
+            return "No activity has been recorded yet." if not events else "\n".join(f"[{event['timestamp']}] {event['type']}: {event['description']}" for event in events)
+        if action == "clear":
+            return f"✓ Cleared {self.engine.activity.clear()} activity events."
+        return "Usage: recent, clear"
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        command = event.value.strip()
+        event.input.value = ""
+        normalized = command.lower()
+        if normalized in {"back", "/back", "q", "quit", "/quit"}:
+            self.app.pop_screen()
+            return
+        self._refresh(command.removeprefix("/") if command.startswith("/") else command)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "back-intelligence":
+            self.app.pop_screen()
 
 
 class SettingsScreen(Screen):
